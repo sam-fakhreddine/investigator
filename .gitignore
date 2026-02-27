@@ -1,0 +1,18 @@
+# Ignore everything by default.
+# Only the pipeline infrastructure is tracked — investigations never go to git.
+*
+
+# Pipeline infrastructure
+!.gitignore
+!CLAUDE.md
+!README.md
+!BUILD-STORY.md
+!PIPELINE.md
+!.no-tdd
+
+!_scripts/
+!_scripts/**
+
+!_templates/
+!_templates/**
+
