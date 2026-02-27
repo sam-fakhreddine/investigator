@@ -1,6 +1,9 @@
 # Ignore everything by default.
-# Only the pipeline infrastructure is tracked — investigations never go to git.
 *
+
+# Investigation folders (PascalCase convention — commit all validated investigations)
+![A-Z]*/
+![A-Z]*/**
 
 # Pipeline infrastructure
 !.gitignore

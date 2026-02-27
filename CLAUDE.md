@@ -31,6 +31,30 @@ RustAsyncPatterns/
 AwsIamPrivilegeEscalation/
 ```
 
+### Sub-Investigations and Rollup
+
+When a topic has multiple related sub-topics that each warrant separate investigation, sub-investigation folders nest **inside** the root investigation folder:
+
+```
+SsmRunAsUserMultiGroupConflict/       ← root (rollup investigation)
+  investigation.json                  ← synthesized from all sub-investigations
+  investigation.md                    ← generated
+  validation_report.md
+  brief_leadership.md
+  brief_po.md
+  glossary.md
+  LzaIdentityCenterConfig/            ← sub-investigation
+    investigation.json
+    investigation.md
+    validation_report.md
+    ...
+  LzaSsmRunAsSync/                    ← sub-investigation
+    investigation.json
+    ...
+```
+
+The root folder's `investigation.json` is always the **rollup** — synthesized from all sub-investigation JSONs by a rollup investigator agent (reads sub-investigation JSONs, does no new live research). The rollup goes through the same validator pipeline as any other investigation. Sub-investigation markdown files are self-contained within their own folders; `check_sync.py` ignores subdirectories.
+
 ### Scope Gate (required before spawning any investigation agent)
 
 Before spawning an investigation agent, the main session **must** ask the following scoping questions to ensure the investigation is focused enough to produce high-quality, atomic findings:
@@ -38,7 +62,7 @@ Before spawning an investigation agent, the main session **must** ask the follow
 1. **What is the single core question?** — Can it be stated in one sentence? If not, split it.
 2. **What is out of scope?** — Name at least one related area that will not be covered.
 3. **Who is the intended consumer of the findings?** — Planning LLM, human analyst, or both?
-4. **Are there known sub-topics that warrant separate investigations?** — If yes, create separate subfolders rather than one broad investigation.
+4. **Are there known sub-topics that warrant separate investigations?** — If yes, each gets its own nested folder inside the root investigation folder.
 
 A question like "tell me about cloud security" must be narrowed (e.g., "What are the documented IAM privilege escalation paths in AWS that do not require existing admin permissions?") before proceeding.
 
@@ -66,9 +90,10 @@ All markdown files are derived from `investigation.json` by script and must neve
 2. **Spawn investigation agent** — writes `investigation.json`; runs `json_to_md.py` to generate `investigation.md` and brief/glossary files
 3. **Spawn validation agent** — receives `investigation.json` as structured input, writes `validation_report.md`
 4. **Remediation** — if validation finds `CONTRADICTED` or material `UNVERIFIED` findings, the main session re-spawns the investigation agent with the specific discrepancies noted, and the agent corrects only the affected sections and re-syncs `investigation.json`
-5. **Main session synthesizes** across all investigation files
+5. **Rollup** (only when sub-investigations exist) — after all sub-investigations are validated, spawn a rollup investigator that reads all sub-investigation JSONs and writes a synthesized `investigation.json` to the root folder; then validate the rollup
+6. **Git commit and push** — after all investigations (and rollup if applicable) are validated and `check_sync.py` exits 0 everywhere, commit all new files and push to the remote
 
-**Validation is never optional and never skipped.**
+**Validation is never optional and never skipped. Git push is the final step.**
 
 ### Remediation Rules
 
@@ -147,5 +172,19 @@ Investigation agents must not return until both scripts exit 0.
 5. **Tensions & Tradeoffs** — competing forces or unresolved tensions
 6. **Open Questions** — what remains unknown
 7. **Sources & References** — all cited material
+
+### Git Workflow
+
+After all investigations in a session are complete, validated, and `check_sync.py` exits 0:
+
+```bash
+git add <investigation_folder>/
+git commit -m "investigation: <topic> — <one-line summary of key finding>"
+git push
+```
+
+Commit message format: `investigation: <PascalCaseFolderName> — <one-line summary>`
+
+For a root investigation with sub-investigations, add the entire root folder in one commit. Never commit partial or unvalidated investigations.
 
 There are no build, lint, or test commands — this is a research/notes repository, not a software project.
