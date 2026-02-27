@@ -17,11 +17,11 @@ For a non-technical overview see [README.md](./README.md). For the build history
 ## Repository Layout
 
 ```
-_scripts/
+scripts/
   json_to_md.py          # Generates all markdown from investigation.json
   check_sync.py          # Verifies JSON and markdown are in sync
 
-_templates/
+templates/
   agent_persona.md       # System prompt for the investigation agent
   validator_persona.md   # System prompt for the validation agent
   investigation.md       # Human-readable template reference (not used by agents)
@@ -67,22 +67,22 @@ A broad question like "tell me about cloud security" must be narrowed before pro
 mkdir <PascalCase name>
 ```
 
-Use PascalCase — no hyphens, underscores, or spaces. Examples: `MsDefenderAwsExclusions`, `AwsIamPrivilegeEscalation`, `RxtShortSqueeze`.
+Use PascalCase — no hyphens, underscores, or spaces. Examples: `MsDefenderAwsExclusions`, `AwsIamPrivilegeEscalation.
 
 ### 3. Spawn the investigation agent
 
-Use the persona in `_templates/agent_persona.md` as the system prompt. Pass the scoped question and the folder path. The agent:
+Use the persona in `templates/agent_persona.md` as the system prompt. Pass the scoped question and the folder path. The agent:
 
 - Researches the question from live sources
 - Writes `investigation.json` to the folder
-- Runs `python3 _scripts/json_to_md.py <folder>` to generate markdown
-- Runs `python3 _scripts/check_sync.py <folder>` — must exit 0 before returning
+- Runs `python3 scripts/json_to_md.py <folder>` to generate markdown
+- Runs `python3 scripts/check_sync.py <folder>` — must exit 0 before returning
 
 Do not accept a result until `check_sync.py` exits 0.
 
 ### 4. Spawn the validation agent
 
-Use the persona in `_templates/validator_persona.md` as the system prompt. Pass `investigation.json` as structured input (not the markdown). The agent:
+Use the persona in `templates/validator_persona.md` as the system prompt. Pass `investigation.json` as structured input (not the markdown). The agent:
 
 - Runs `check_sync.py` first and pastes the output into the report
 - Verifies every source URL
@@ -112,8 +112,8 @@ After any correction: re-run `json_to_md.py` → re-run `check_sync.py` → must
 Generates all markdown from `investigation.json`. This is the only way markdown should be produced.
 
 ```bash
-python3 _scripts/json_to_md.py <investigation_dir>
-python3 _scripts/json_to_md.py <investigation_dir> --dry-run   # print to stdout, no write
+python3 scripts/json_to_md.py <investigation_dir>
+python3 scripts/json_to_md.py <investigation_dir> --dry-run   # print to stdout, no write
 ```
 
 **Files produced:**
@@ -140,7 +140,7 @@ python3 _scripts/json_to_md.py <investigation_dir> --dry-run   # print to stdout
 Verifies that `investigation.md` content matches `investigation.json` across five fields. Also checks that brief files exist when `audience_briefs` is present in JSON.
 
 ```bash
-python3 _scripts/check_sync.py <investigation_dir>
+python3 scripts/check_sync.py <investigation_dir>
 ```
 
 **Exit codes:** `0` = IN_SYNC, `1` = OUT_OF_SYNC, `2` = error
@@ -257,14 +257,14 @@ The legacy folder `ms-defender-aws-exclusions/` predates this convention. All ne
 # 1. Create folder
 mkdir NewInvestigationName
 
-# 2. Run the investigation agent (see _templates/agent_persona.md)
+# 2. Run the investigation agent (see templates/agent_persona.md)
 #    Agent writes investigation.json and runs both scripts
 
 # 3. Confirm sync
-python3 _scripts/check_sync.py NewInvestigationName
+python3 scripts/check_sync.py NewInvestigationName
 # Must exit 0
 
-# 4. Run the validation agent (see _templates/validator_persona.md)
+# 4. Run the validation agent (see templates/validator_persona.md)
 #    Validator writes validation_report.md
 
 # 5. Apply any remediation, re-run scripts, re-confirm exit 0
@@ -292,8 +292,8 @@ Investigations never go to git — `.gitignore` excludes all investigation folde
 
 | File | What it is |
 |------|-----------|
-| `_templates/agent_persona.md` | System prompt for the investigation agent — defines research constraints, output format, and JSON field requirements |
-| `_templates/validator_persona.md` | System prompt for the validation agent — defines verification scope, verdict taxonomy, and report format |
-| `_templates/investigation.schema.json` | JSON field definitions and annotated examples |
-| `_templates/investigation.md` | Human-readable template showing the expected structure of a completed investigation |
-| `_templates/validation_report.md` | Template showing the expected structure of a validation report |
+| `templates/agent_persona.md` | System prompt for the investigation agent — defines research constraints, output format, and JSON field requirements |
+| `templates/validator_persona.md` | System prompt for the validation agent — defines verification scope, verdict taxonomy, and report format |
+| `templates/investigation.schema.json` | JSON field definitions and annotated examples |
+| `templates/investigation.md` | Human-readable template showing the expected structure of a completed investigation |
+| `templates/validation_report.md` | Template showing the expected structure of a validation report |

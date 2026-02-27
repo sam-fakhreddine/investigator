@@ -16,7 +16,7 @@ This repo operates on a three-layer agent pattern:
 | **Investigation agents (spawned)** | One-shot researchers — investigate a single topic and return structured outputs |
 | **Validation agents (spawned)** | One-shot fact-checkers — verify sources and findings after every investigation, always run last |
 
-The main session spawns investigation agents using the persona in `_templates/agent_persona.md`, then spawns a validation agent using the persona in `_templates/validator_persona.md`. Raw research and raw validation never happen in the main session.
+The main session spawns investigation agents using the persona in `templates/agent_persona.md`, then spawns a validation agent using the persona in `templates/validator_persona.md`. Raw research and raw validation never happen in the main session.
 
 ## Structure Convention
 
@@ -98,7 +98,7 @@ The principle: a human opening the markdown should get the answer in the first s
 Investigation agents write **`investigation.json` only**. The markdown is always produced by script:
 
 ```
-python3 _scripts/json_to_md.py <investigation_dir>
+python3 scripts/json_to_md.py <investigation_dir>
 ```
 
 This eliminates JSON/MD drift entirely — the markdown is derived, never hand-authored.
@@ -108,7 +108,7 @@ This eliminates JSON/MD drift entirely — the markdown is derived, never hand-a
 After generating the markdown, verify with:
 
 ```
-python3 _scripts/check_sync.py <investigation_dir>
+python3 scripts/check_sync.py <investigation_dir>
 ```
 
 - **Investigation agent**: write JSON → run `json_to_md.py` → run `check_sync.py` → must exit 0 before returning

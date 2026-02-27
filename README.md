@@ -92,13 +92,6 @@ Check `validation_report.md` to see what was independently verified. Verdicts:
 
 ---
 
-## Investigations
-
-| Investigation | Question | Status |
-|---------------|----------|--------|
-| [MS Defender AWS Exclusions](./ms-defender-aws-exclusions/investigation.md) | What Defender exclusions should we configure for CloudWatch, SSM, and Rapid7 on Windows Server EC2? | ✅ Complete + Validated |
-| [RXT Short Squeeze](./RxtShortSqueeze/investigation.md) | What drove the RXT short squeeze? | ✅ Complete + Validated |
-
 ---
 
 ## FAQ
@@ -122,7 +115,7 @@ Yes. Completed investigations include open questions. If something needs deeper 
 Three-layer agent pattern:
 
 1. **Investigator agent** — researches the question, writes `investigation.json`
-2. **Script** — generates all markdown from JSON (`python3 _scripts/json_to_md.py <dir>`)
+2. **Script** — generates all markdown from JSON (`python3 scripts/json_to_md.py <dir>`)
 3. **Validation agent** — fact-checks findings and sources, writes `validation_report.md`
 
 Investigations cannot be marked complete until the validation agent has run and all material findings have been confirmed or corrected.
