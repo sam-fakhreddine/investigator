@@ -10,6 +10,9 @@
 !PIPELINE.md
 !.no-tdd
 
+!assets/
+!assets/**
+
 !_scripts/
 !_scripts/**
 

@@ -1,4 +1,8 @@
-# 🐊🔍 Investigator
+<p align="center">
+  <img src="assets/logo-200.png" alt="Investigator" width="160">
+</p>
+
+# Investigator
 
 > *The Sherlock Holmes Gator never misses a clue.*
 
