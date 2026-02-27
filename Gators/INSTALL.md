@@ -1,7 +1,7 @@
-# InvestigatorV2 — Installation Guide
+# Gators — Installation Guide
 
-Step-by-step instructions to activate InvestigatorV2 agent teams in an existing Investigator repo.
-After completing these steps the `/gator` skill will orchestrate a two-teammate investigation team (investigator + validator) instead of running sequentially in the main session.
+Step-by-step instructions to activate Gators agent teams in an existing Investigator repo.
+After completing these steps the `/gators` skill will orchestrate a two-teammate investigation team (investigator + validator) instead of running sequentially in the main session.
 
 Prerequisites: Claude Code installed, Python 3.10+, an existing Investigator repo with `scripts/` and `templates/` in place.
 
@@ -21,7 +21,7 @@ Open `.claude/settings.local.json` and add the `env` block. If the file already 
 }
 ```
 
-The full diff to merge is in `InvestigatorV2/settings-patch.json`. The simplest way to apply it without losing existing settings is to open the file in an editor and copy the two top-level keys (`env`, `hooks`) into your existing JSON.
+The full diff to merge is in `Gators/settings-patch.json`. The simplest way to apply it without losing existing settings is to open the file in an editor and copy the two top-level keys (`env`, `hooks`) into your existing JSON.
 
 Do not replace the entire `settings.local.json` — the file already contains `permissions.allow` entries that must be preserved.
 
@@ -57,11 +57,11 @@ The three hooks enforce pipeline quality gates automatically:
 
 | Hook | File | When it fires | What it does |
 |------|------|---------------|--------------|
-| `PostToolUse` | `InvestigatorV2/hooks/post_tool_use.py` | After any Write or Edit tool call | Checks that `investigation.json` and `investigation.md` are in sync; exits 2 and blocks if they have drifted |
-| `TeammateIdle` | `InvestigatorV2/hooks/teammate_idle.py` | When a teammate is about to go idle | Checks whether the teammate's assigned task is complete and all required output files exist; exits 2 with feedback if the teammate stopped early |
-| `TaskCompleted` | `InvestigatorV2/hooks/task_completed.py` | When a task is being marked complete | Enforces quality gates (sync check, required files, validation report present) before allowing the task to close |
+| `PostToolUse` | `Gators/hooks/post_tool_use.py` | After any Write or Edit tool call | Checks that `investigation.json` and `investigation.md` are in sync; exits 2 and blocks if they have drifted |
+| `TeammateIdle` | `Gators/hooks/teammate_idle.py` | When a teammate is about to go idle | Checks whether the teammate's assigned task is complete and all required output files exist; exits 2 with feedback if the teammate stopped early |
+| `TaskCompleted` | `Gators/hooks/task_completed.py` | When a task is being marked complete | Enforces quality gates (sync check, required files, validation report present) before allowing the task to close |
 
-Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `InvestigatorV2/settings-patch.json` under the `"hooks"` key:
+Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `Gators/settings-patch.json` under the `"hooks"` key:
 
 ```json
 {
@@ -72,7 +72,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `In
         "hooks": [
           {
             "type": "command",
-            "command": "python3 InvestigatorV2/hooks/post_tool_use.py"
+            "command": "python3 Gators/hooks/post_tool_use.py"
           }
         ]
       }
@@ -82,7 +82,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `In
         "hooks": [
           {
             "type": "command",
-            "command": "python3 InvestigatorV2/hooks/teammate_idle.py"
+            "command": "python3 Gators/hooks/teammate_idle.py"
           }
         ]
       }
@@ -92,7 +92,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `In
         "hooks": [
           {
             "type": "command",
-            "command": "python3 InvestigatorV2/hooks/task_completed.py"
+            "command": "python3 Gators/hooks/task_completed.py"
           }
         ]
       }
@@ -101,7 +101,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `In
 }
 ```
 
-Important: all commands are relative to the repo root. Claude Code resolves hook commands from the project's working directory, so `InvestigatorV2/hooks/post_tool_use.py` is correct as written — do not use absolute paths or `./` prefixes.
+Important: all commands are relative to the repo root. Claude Code resolves hook commands from the project's working directory, so `Gators/hooks/post_tool_use.py` is correct as written — do not use absolute paths or `./` prefixes.
 
 `TeammateIdle` and `TaskCompleted` do not support matchers. Any `matcher` field added to those events is silently ignored by Claude Code.
 
@@ -109,16 +109,16 @@ After editing the settings file, Claude Code does not pick up hook changes mid-s
 
 ---
 
-## Step 4 — Install the `/gator` skill
+## Step 4 — Install the `/gators` skill
 
 Skills live in `.claude/skills/`. Create the directory if it does not exist, then copy the skill file:
 
 ```bash
 mkdir -p /Users/samfakhreddine/repos/research/.claude/skills
-cp InvestigatorV2/SKILL.md .claude/skills/gator.md
+cp Gators/SKILL.md .claude/skills/gators.md
 ```
 
-The skill file tells Claude Code how to respond to `/gator <question>`. It instructs the lead to:
+The skill file tells Claude Code how to respond to `/gators <question>`. It instructs the lead to:
 1. Run the scope gate
 2. Create the investigation folder
 3. Create the task list with `investigate` and `validate` (validate depends on investigate)
@@ -126,7 +126,7 @@ The skill file tells Claude Code how to respond to `/gator <question>`. It instr
 5. Monitor progress and apply remediation if the validator returns `CONTRADICTED` or material `UNVERIFIED` verdicts
 6. Synthesize findings for the user once both tasks are complete and `validation_report.md` is present
 
-The skill source is `InvestigatorV2/SKILL.md`. It is installed as `gator.md` under `.claude/skills/` — the filename (without `.md`) becomes the slash command name.
+The skill source is `Gators/SKILL.md`. It is installed as `gator.md` under `.claude/skills/` — the filename (without `.md`) becomes the slash command name.
 
 ---
 
@@ -148,9 +148,9 @@ The status output should show `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the en
 
 Type `/hooks` in Claude Code. You should see three entries:
 
-- `PostToolUse` — matcher `Write|Edit` — `python3 InvestigatorV2/hooks/post_tool_use.py`
-- `TeammateIdle` — no matcher — `python3 InvestigatorV2/hooks/teammate_idle.py`
-- `TaskCompleted` — no matcher — `python3 InvestigatorV2/hooks/task_completed.py`
+- `PostToolUse` — matcher `Write|Edit` — `python3 Gators/hooks/post_tool_use.py`
+- `TeammateIdle` — no matcher — `python3 Gators/hooks/teammate_idle.py`
+- `TaskCompleted` — no matcher — `python3 Gators/hooks/task_completed.py`
 
 If a hook is missing, check that the `hooks` block in `settings.local.json` is valid JSON (no trailing commas, balanced braces) and restart the session.
 
@@ -168,7 +168,7 @@ Then run the hook script directly:
 
 ```bash
 echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/test_hook_investigation.json"}}' \
-  | python3 InvestigatorV2/hooks/post_tool_use.py
+  | python3 Gators/hooks/post_tool_use.py
 echo "Exit code: $?"
 ```
 
@@ -176,13 +176,13 @@ Expected: exit code 0 (no `investigation.md` present means the hook skips the ch
 
 ### 5d — Confirm the skill loads
 
-Type `/gator` in Claude Code. Claude should recognize the command and start the scope gate questions. If it does not, confirm `.claude/skills/gator.md` exists and that the skill frontmatter is correct.
+Type `/gators` in Claude Code. Claude should recognize the command and start the scope gate questions. If it does not, confirm `.claude/skills/gators.md` exists and that the skill frontmatter is correct.
 
 ---
 
 ## Known limitations
 
-These are documented limitations of Claude Code agent teams as of February 2026. They are inherent to the platform and not specific to InvestigatorV2.
+These are documented limitations of Claude Code agent teams as of February 2026. They are inherent to the platform and not specific to Gators.
 
 **No session resumption with in-process teammates.** If you use `/resume` or `/rewind` to restore a session, in-process teammates are not restored. The lead may attempt to message teammates that no longer exist. If this happens, tell the lead to spawn replacement teammates.
 
@@ -190,7 +190,7 @@ These are documented limitations of Claude Code agent teams as of February 2026.
 
 **One team per session.** A lead can only manage one active team at a time. If you need to run a second investigation in parallel, open a second Claude Code session in the same repo. Clean up the first team before starting a second one in the same session (`Clean up the team`).
 
-**No nested teams.** Teammates cannot spawn their own teams or sub-teammates. Only the lead manages the team. InvestigatorV2's two-teammate structure (investigator + validator) stays flat by design.
+**No nested teams.** Teammates cannot spawn their own teams or sub-teammates. Only the lead manages the team. Gators's two-teammate structure (investigator + validator) stays flat by design.
 
 **Hook changes require a session restart.** Claude Code captures a snapshot of hooks at startup. If you edit `settings.local.json` during a session, the new hooks will not fire until you start a fresh session. Claude Code will warn you and require review in `/hooks` before changes apply.
 
@@ -204,9 +204,9 @@ These are documented limitations of Claude Code agent teams as of February 2026.
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| Teammates not appearing after `/gator` | Agent teams not enabled or wrong session | Confirm `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `/status`, restart session |
+| Teammates not appearing after `/gators` | Agent teams not enabled or wrong session | Confirm `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `/status`, restart session |
 | Hooks not firing | Settings edited mid-session | Restart Claude Code session |
 | `task-002` stuck as pending | Teammate failed to mark `task-001` complete | Tell lead: "Check task-001 status and mark it complete if the investigation files are present" |
 | PostToolUse hook exits 2 unexpectedly | `investigation.md` not regenerated after JSON edit | Run `python3 scripts/json_to_md.py <investigation_dir>` |
-| `/gator` not recognized | Skill file missing or bad frontmatter | Confirm `.claude/skills/gator.md` exists and frontmatter is valid YAML |
+| `/gators` not recognized | Skill file missing or bad frontmatter | Confirm `.claude/skills/gators.md` exists and frontmatter is valid YAML |
 | Split panes not working | tmux not installed or wrong terminal | Use `"in-process"` mode or install tmux via `brew install tmux` |

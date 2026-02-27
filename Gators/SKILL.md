@@ -1,11 +1,11 @@
-# Skill: /gator
+# Skill: /gators
 
 Runs a full investigation pipeline for a given topic using an agent team. The lead session scopes the question, creates the investigation folder, spawns an investigator teammate and a validator teammate, monitors remediation cycles, and synthesizes the final output.
 
 ## Invocation
 
 ```
-/gator <topic>
+/gators <topic>
 ```
 
 `<topic>` may be a phrase, sentence, or rough area. The lead will narrow it through the scope gate before any agent is spawned.
@@ -22,7 +22,7 @@ CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 If this environment variable is not set, the skill cannot spawn teammate agents. Inform the user before proceeding:
 
-> Agent teams are required for this skill. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment and re-invoke `/gator`.
+> Agent teams are required for this skill. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment and re-invoke `/gators`.
 
 Do not proceed past the scope gate if the variable is not set.
 
@@ -56,7 +56,7 @@ Once the user answers:
 - Restate the scoped question as a single sentence
 - Confirm what is out of scope
 - Note the intended consumer(s) — this determines whether `audience_briefs` is required in the JSON
-- If sub-topics were identified, note that each will require a separate `/gator` invocation; proceed with the one confirmed topic only
+- If sub-topics were identified, note that each will require a separate `/gators` invocation; proceed with the one confirmed topic only
 
 Do not proceed until the scoped question is confirmed by the user.
 

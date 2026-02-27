@@ -1,5 +1,5 @@
 {
-  "_comment": "Merge this block into .claude/settings.local.json to activate InvestigatorV2. Do not replace the entire file — merge each top-level key.",
+  "_comment": "Merge this block into .claude/settings.local.json to activate Gators. Do not replace the entire file — merge each top-level key.",
 
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 InvestigatorV2/hooks/post_tool_use.py"
+            "command": "python3 Gators/hooks/post_tool_use.py"
           }
         ]
       }
@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 InvestigatorV2/hooks/teammate_idle.py"
+            "command": "python3 Gators/hooks/teammate_idle.py"
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 InvestigatorV2/hooks/task_completed.py"
+            "command": "python3 Gators/hooks/task_completed.py"
           }
         ]
       }
