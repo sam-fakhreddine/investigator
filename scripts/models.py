@@ -9,10 +9,59 @@ Used by:
 
 The generated JSON schema is embedded in templates/agent_persona.md so agents
 receive the exact schema spec, not a prose description.
+
+Validation layers:
+  1. Structural — field types, required fields, extra="forbid" (schema compliance)
+  2. Scalar constraints — Annotated types enforce trust boundary rules on individual
+     values (no embedded newlines, safe URL schemes, no heading-prefix on concept names)
+  3. Cross-field — @model_validator(mode="after") checks citation grounding: sources
+     must exist when findings exist; no duplicate URLs; coverage ratio
 """
 
-from typing import Optional, Union
-from pydantic import BaseModel, Field, field_validator
+from typing import Annotated, Optional, Union
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+)
+
+
+
+def _no_newlines(v: str) -> str:
+    """Reject strings that embed newlines — they break blockquote / table rendering."""
+    if "\n" in v or "\r" in v:
+        raise ValueError("must not contain newlines (single-line field)")
+    return v
+
+
+def _safe_url(v: str) -> str:
+    """Only https:// or http:// schemes are allowed — other schemes are silently
+    dropped by the renderer so we reject them at validation time."""
+    if not (v.startswith("https://") or v.startswith("http://")):
+        raise ValueError(f"URL must start with https:// or http://, got {v!r}")
+    return v
+
+
+def _no_hash_prefix(v: str) -> str:
+    """Concept names must not start with '#' — they render as headings in the glossary."""
+    if v.startswith("#"):
+        raise ValueError("concept name must not start with '#' (renders as heading)")
+    return v
+
+
+def _non_empty(v: str) -> str:
+    if not v.strip():
+        raise ValueError("must not be empty or whitespace-only")
+    return v
+
+
+SingleLineStr = Annotated[str, AfterValidator(_no_newlines), AfterValidator(_non_empty)]
+BulletStr = Annotated[str, AfterValidator(_no_newlines), AfterValidator(_non_empty)]
+SafeUrlStr = Annotated[str, AfterValidator(_safe_url)]
+ConceptNameStr = Annotated[str, AfterValidator(_no_hash_prefix), AfterValidator(_no_newlines), AfterValidator(_non_empty)]
+
 
 
 class QuickReference(BaseModel):
@@ -23,24 +72,24 @@ class QuickReference(BaseModel):
 
 
 class Source(BaseModel):
-    title: str
-    url: str
+    title: SingleLineStr
+    url: SafeUrlStr
 
 
 class Concept(BaseModel):
-    name: str
+    name: ConceptNameStr
     description: str
 
 
 class EngineeringLeadershipBrief(BaseModel):
     """Engineering leadership brief — outcome-focused, no implementation detail."""
-    headline: str = Field(description="One sentence, outcome-focused, no filler.")
+    headline: SingleLineStr = Field(description="One sentence, outcome-focused, no filler.")
     so_what: str = Field(description="Risk, cost, or strategic implication in 1-2 sentences.")
-    bullets: list[str] = Field(
+    bullets: list[BulletStr] = Field(
         min_length=1,
         description="3-5 hard-hitting points focused on impact, risk, or decision triggers.",
     )
-    action_required: Optional[str] = Field(
+    action_required: Optional[SingleLineStr] = Field(
         default=None,
         description="A concrete decision or next step, or null.",
     )
@@ -52,7 +101,7 @@ class PONextSteps(BaseModel):
     po_action: str = Field(
         description="What the PO/EM needs to decide or kick off — specific and actionable."
     )
-    work_to_assign: list[str] = Field(
+    work_to_assign: list[BulletStr] = Field(
         min_length=1,
         description="Discrete work items the PO/EM will hand to engineers. Must be a list.",
     )
@@ -66,13 +115,13 @@ class PONextSteps(BaseModel):
 
 class ProductOwnerBrief(BaseModel):
     """Product owner brief — plain English, zero jargon, actionable next steps."""
-    headline: str = Field(
+    headline: SingleLineStr = Field(
         description="Plain English, zero jargon. What is this issue in one sentence?"
     )
     so_what: str = Field(
         description="What this means for users or the product in 1-2 sentences. No technical terms."
     )
-    bullets: list[str] = Field(
+    bullets: list[BulletStr] = Field(
         min_length=1,
         description="3-5 bullets a non-engineer can understand and act on.",
     )
@@ -118,3 +167,46 @@ class Investigation(BaseModel):
     audience_briefs: Optional[AudienceBriefs] = None
 
     model_config = {"extra": "allow"}
+
+
+    @model_validator(mode="after")
+    def sources_present_when_findings_exist(self) -> "Investigation":
+        """If there are key findings, there must be at least one source.
+        An investigation without citations is unverifiable."""
+        if self.key_findings and not self.sources:
+            raise ValueError(
+                "key_findings are present but sources is empty — "
+                "every finding must be grounded in at least one cited source"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def no_duplicate_source_urls(self) -> "Investigation":
+        """Duplicate source URLs indicate copy-paste errors or hallucinated citations."""
+        seen: set[str] = set()
+        dupes: list[str] = []
+        for src in self.sources:
+            url = src.url
+            if url in seen:
+                dupes.append(url)
+            seen.add(url)
+        if dupes:
+            raise ValueError(
+                f"duplicate source URLs detected (each source must be unique): {dupes}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def citation_coverage_ratio(self) -> "Investigation":
+        """Require at least one source per three key findings.
+        This catches investigations where an agent generates many findings
+        from a single citation or from memory."""
+        n_findings = len(self.key_findings)
+        n_sources = len(self.sources)
+        required = max(1, n_findings // 3)
+        if n_findings > 0 and n_sources < required:
+            raise ValueError(
+                f"citation coverage too low: {n_findings} findings require at least "
+                f"{required} sources, but only {n_sources} provided"
+            )
+        return self
