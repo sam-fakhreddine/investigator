@@ -1,0 +1,30 @@
+{
+  "_schema_version": "1.0",
+  "_comment": "This file is created by the lead agent at the start of each investigation. It lives in the investigation folder (e.g. AwsIamPrivilegeEscalation/tasks.json). The lead writes it; teammates read it to claim work and post completions.",
+
+  "team_name": "AwsIamPrivilegeEscalation-20260227",
+  "investigation_dir": "/Users/samfakhreddine/repos/research/AwsIamPrivilegeEscalation",
+  "question": "What are the documented IAM privilege escalation paths in AWS that do not require existing admin permissions?",
+  "created_at": "2026-02-27T09:00:00Z",
+
+  "tasks": [
+    {
+      "id": "task-001",
+      "description": "Investigate documented AWS IAM privilege escalation paths from non-admin starting positions. Write investigation.json to the investigation folder, run scripts/json_to_md.py, confirm scripts/check_sync.py exits 0, then mark this task complete.",
+      "status": "pending",
+      "dependsOn": [],
+      "claimed_by": null,
+      "completed_at": null
+    },
+    {
+      "id": "task-002",
+      "description": "Validate the investigation findings. Run scripts/check_sync.py first and paste the output verbatim into the report header. Verify every source URL (VERIFIED / REDIRECT / DEAD / UNVERIFIABLE). Spot-check high-stakes factual claims against live AWS documentation. Write validation_report.md to the investigation folder.",
+      "status": "pending",
+      "dependsOn": ["task-001"],
+      "claimed_by": null,
+      "completed_at": null
+    }
+  ],
+
+  "corrections": []
+}

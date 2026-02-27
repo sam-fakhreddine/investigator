@@ -19,3 +19,8 @@
 !templates/
 !templates/**
 
+!InvestigatorV2/
+!InvestigatorV2/**
+InvestigatorV2/hooks/__pycache__/
+InvestigatorV2/**/__pycache__/
+
