@@ -1,7 +1,7 @@
 # InvestigatorV2 — Installation Guide
 
 Step-by-step instructions to activate InvestigatorV2 agent teams in an existing Investigator repo.
-After completing these steps the `/investigate` skill will orchestrate a two-teammate investigation team (investigator + validator) instead of running sequentially in the main session.
+After completing these steps the `/gator` skill will orchestrate a two-teammate investigation team (investigator + validator) instead of running sequentially in the main session.
 
 Prerequisites: Claude Code installed, Python 3.10+, an existing Investigator repo with `scripts/` and `templates/` in place.
 
@@ -109,16 +109,16 @@ After editing the settings file, Claude Code does not pick up hook changes mid-s
 
 ---
 
-## Step 4 — Install the `/investigate` skill
+## Step 4 — Install the `/gator` skill
 
 Skills live in `.claude/skills/`. Create the directory if it does not exist, then copy the skill file:
 
 ```bash
 mkdir -p /Users/samfakhreddine/repos/research/.claude/skills
-cp InvestigatorV2/SKILL.md .claude/skills/investigate.md
+cp InvestigatorV2/SKILL.md .claude/skills/gator.md
 ```
 
-The skill file tells Claude Code how to respond to `/investigate <question>`. It instructs the lead to:
+The skill file tells Claude Code how to respond to `/gator <question>`. It instructs the lead to:
 1. Run the scope gate
 2. Create the investigation folder
 3. Create the task list with `investigate` and `validate` (validate depends on investigate)
@@ -126,7 +126,7 @@ The skill file tells Claude Code how to respond to `/investigate <question>`. It
 5. Monitor progress and apply remediation if the validator returns `CONTRADICTED` or material `UNVERIFIED` verdicts
 6. Synthesize findings for the user once both tasks are complete and `validation_report.md` is present
 
-The skill source is `InvestigatorV2/SKILL.md`. It is installed as `investigate.md` under `.claude/skills/` — the filename (without `.md`) becomes the slash command name.
+The skill source is `InvestigatorV2/SKILL.md`. It is installed as `gator.md` under `.claude/skills/` — the filename (without `.md`) becomes the slash command name.
 
 ---
 
@@ -176,7 +176,7 @@ Expected: exit code 0 (no `investigation.md` present means the hook skips the ch
 
 ### 5d — Confirm the skill loads
 
-Type `/investigate` in Claude Code. Claude should recognize the command and start the scope gate questions. If it does not, confirm `.claude/skills/investigate.md` exists and that the skill frontmatter is correct.
+Type `/gator` in Claude Code. Claude should recognize the command and start the scope gate questions. If it does not, confirm `.claude/skills/gator.md` exists and that the skill frontmatter is correct.
 
 ---
 
@@ -204,9 +204,9 @@ These are documented limitations of Claude Code agent teams as of February 2026.
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| Teammates not appearing after `/investigate` | Agent teams not enabled or wrong session | Confirm `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `/status`, restart session |
+| Teammates not appearing after `/gator` | Agent teams not enabled or wrong session | Confirm `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `/status`, restart session |
 | Hooks not firing | Settings edited mid-session | Restart Claude Code session |
 | `task-002` stuck as pending | Teammate failed to mark `task-001` complete | Tell lead: "Check task-001 status and mark it complete if the investigation files are present" |
 | PostToolUse hook exits 2 unexpectedly | `investigation.md` not regenerated after JSON edit | Run `python3 scripts/json_to_md.py <investigation_dir>` |
-| `/investigate` not recognized | Skill file missing or bad frontmatter | Confirm `.claude/skills/investigate.md` exists and frontmatter is valid YAML |
+| `/gator` not recognized | Skill file missing or bad frontmatter | Confirm `.claude/skills/gator.md` exists and frontmatter is valid YAML |
 | Split panes not working | tmux not installed or wrong terminal | Use `"in-process"` mode or install tmux via `brew install tmux` |
