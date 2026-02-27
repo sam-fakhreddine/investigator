@@ -1,0 +1,311 @@
+# IAM Identity Center InstanceAccessControlAttributeConfiguration — Schema, Configuration Surface, Drift, and Idempotency — Product Brief
+
+**Date:** 2026-02-27
+
+---
+
+## What Is This?
+
+> The AWS setting that lets users' directory attributes drive which OS account is used in SSM sessions is a single shared control per Identity Center instance — if the stack managing it is deleted, per-user session routing stops immediately for everyone
+
+---
+
+## Next Steps
+
+**Engineering Work Items:**
+- I
+- n
+- f
+- r
+- a
+- /
+- a
+- r
+- c
+- h
+- i
+- t
+- e
+- c
+- t
+- u
+- r
+- e
+-  
+- t
+- e
+- a
+- m
+-  
+- t
+- o
+-  
+- a
+- d
+- d
+-  
+- D
+- e
+- l
+- e
+- t
+- i
+- o
+- n
+- P
+- o
+- l
+- i
+- c
+- y
+- :
+-  
+- R
+- e
+- t
+- a
+- i
+- n
+-  
+- t
+- o
+-  
+- t
+- h
+- e
+-  
+- r
+- e
+- s
+- o
+- u
+- r
+- c
+- e
+-  
+- a
+- n
+- d
+-  
+- e
+- n
+- a
+- b
+- l
+- e
+-  
+- s
+- t
+- a
+- c
+- k
+-  
+- t
+- e
+- r
+- m
+- i
+- n
+- a
+- t
+- i
+- o
+- n
+-  
+- p
+- r
+- o
+- t
+- e
+- c
+- t
+- i
+- o
+- n
+-  
+- o
+- n
+-  
+- t
+- h
+- e
+-  
+- o
+- w
+- n
+- i
+- n
+- g
+-  
+- s
+- t
+- a
+- c
+- k
+- .
+-  
+- I
+- d
+- e
+- n
+- t
+- i
+- t
+- y
+-  
+- t
+- e
+- a
+- m
+-  
+- t
+- o
+-  
+- c
+- o
+- n
+- f
+- i
+- r
+- m
+-  
+- t
+- h
+- e
+-  
+- E
+- n
+- t
+- r
+- a
+-  
+- S
+- C
+- I
+- M
+-  
+- a
+- t
+- t
+- r
+- i
+- b
+- u
+- t
+- e
+-  
+- p
+- a
+- t
+- h
+-  
+- f
+- o
+- r
+-  
+- s
+- A
+- M
+- A
+- c
+- c
+- o
+- u
+- n
+- t
+- N
+- a
+- m
+- e
+-  
+- —
+-  
+- t
+- h
+- i
+- s
+-  
+- i
+- s
+-  
+- t
+- h
+- e
+-  
+- o
+- n
+- l
+- y
+-  
+- r
+- e
+- m
+- a
+- i
+- n
+- i
+- n
+- g
+-  
+- t
+- e
+- c
+- h
+- n
+- i
+- c
+- a
+- l
+-  
+- d
+- e
+- p
+- e
+- n
+- d
+- e
+- n
+- c
+- y
+-  
+- b
+- e
+- f
+- o
+- r
+- e
+-  
+- t
+- h
+- e
+-  
+- I
+- a
+- C
+-  
+- c
+- h
+- a
+- n
+- g
+- e
+-  
+- c
+- a
+- n
+-  
+- b
+- e
+-  
+- w
+- r
+- i
+- t
+- t
+- e
+- n
+- .
+
+---
+
+*Full investigation: [investigation.md](investigation.md) — [Glossary](glossary.md)*

@@ -1,0 +1,168 @@
+{
+  "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration — Drift, Idempotency, and Update Behavior",
+  "date": "2026-02-27",
+  "status": "complete",
+  "question": "What are the documented drift, idempotency, and update behaviors of InstanceAccessControlAttributeConfiguration in IAM Identity Center when managed via CloudFormation or CDK — specifically: what happens on re-apply, how updates differ from creates, and what ordering constraints exist?",
+  "context": "Teams managing IAM Identity Center ABAC configuration via CloudFormation or CDK need to understand how the resource behaves across stack creates, updates, and re-deploys. Unlike most CloudFormation resources, this resource maps to a singleton per IdC instance (one ABAC config per instance), and the underlying API separates Create from Update into distinct calls. This creates non-obvious failure modes when IaC is deployed against an instance where ABAC was previously configured outside of CloudFormation, or when multiple stacks target the same IdC instance.",
+  "quick_reference": {
+    "title": "Drift and Update Behavior at a Glance",
+    "columns": ["Scenario", "Behavior", "Risk"],
+    "rows": [
+      ["Change AccessControlAttributes in existing stack", "In-place update via UpdateInstanceAccessControlAttributeConfiguration — no interruption", "Low — documented safe path"],
+      ["Change InstanceArn in existing stack", "Resource replacement — CloudFormation deletes and re-creates", "High — deletes all attribute mappings, disables ABAC on original instance"],
+      ["Deploy stack when ABAC was already console-configured on the same instance", "CloudFormation issues CreateInstanceAccessControlAttributeConfiguration; outcome depends on whether the resource provider reads existing state first — ConflictException possible", "High — undocumented collision behavior; not guaranteed to fail gracefully"],
+      ["Deploy two stacks with this resource against the same IdC instance", "Second stack's create will conflict; per-instance singleton enforced at the API layer", "High — no isolation between stacks; second deploy will fail or overwrite"],
+      ["Delete stack containing this resource", "Calls DeleteInstanceAccessControlAttributeConfiguration — disables ABAC entirely and deletes all mappings", "High — ABAC-dependent permission policies stop matching immediately"],
+      ["Run CloudFormation drift detection against this resource", "Resource will show as NOT_CHECKED — drift detection is not supported for AWS::SSO resources", "Medium — out-of-band changes are invisible to CloudFormation"],
+      ["Re-apply stack with no changes (cdk deploy / cfn update with identical template)", "CloudFormation compares desired vs tracked state; no API call issued if attributes are unchanged", "Low — idempotent at CloudFormation layer when state is tracked"]
+    ],
+    "notes": "The Create/Update API distinction is entirely hidden by CloudFormation — the resource provider decides which API to call. Practitioners cannot observe which path was taken without inspecting CloudTrail. Drift detection is absent for this resource type, making out-of-band changes undetectable by IaC tooling."
+  },
+  "key_findings": [
+    "The underlying API exposes three distinct operations — CreateInstanceAccessControlAttributeConfiguration, UpdateInstanceAccessControlAttributeConfiguration, and DeleteInstanceAccessControlAttributeConfiguration — each with separate semantics. CloudFormation abstracts this: the Create handler calls the Create API, the Update handler calls the Update API, and the Delete handler calls the Delete API. Practitioners cannot directly invoke 'Update' via IaC — the resource provider chooses the path.",
+    "DescribeInstanceAccessControlAttributeConfiguration is the read-side API. It returns a Status field with three possible values: ENABLED, CREATION_IN_PROGRESS, and CREATION_FAILED. The API is believed to return ResourceNotFoundException for an instance that has never had ABAC configured, though this edge case is not explicitly documented by AWS. CloudFormation's read handler uses this API to assess current state.",
+    "AWS::SSO::InstanceAccessControlAttributeConfiguration is a singleton resource scoped to a single IdC instance. Only one ABAC configuration can exist per instance. Deploying the resource from two stacks against the same InstanceArn is not supported and will result in a conflict at the API layer. CloudFormation does not enforce uniqueness across stacks at the template level — the constraint is enforced only at deploy time.",
+    "Update behavior is property-specific. Changes to AccessControlAttributes are in-place (no interruption, calls UpdateInstanceAccessControlAttributeConfiguration). Changes to InstanceArn trigger resource replacement — CloudFormation deletes the existing resource (calling Delete, which disables ABAC on the original instance) and creates a new one against the new ARN. This is a destructive operation with no automatic rollback of attribute mappings.",
+    "CloudFormation drift detection does not support AWS::SSO::InstanceAccessControlAttributeConfiguration. Resources that do not support drift detection receive a drift status of NOT_CHECKED. Any out-of-band changes made via the console, CLI, or other IaC tools are invisible to CloudFormation and will not be surfaced as drift. The only way to detect divergence is to compare DescribeInstanceAccessControlAttributeConfiguration output against the deployed template manually.",
+    "Stack deletion is destructive. Deleting the CloudFormation stack that owns this resource calls DeleteInstanceAccessControlAttributeConfiguration, which disables ABAC entirely and removes all attribute mappings. Any existing permission set policies that depend on aws:PrincipalTag conditions will stop matching immediately — there is no grace period. A DeletionPolicy: Retain can be applied to the resource via cfnOptions in CDK or the DeletionPolicy attribute in CloudFormation to prevent this.",
+    "If ABAC was configured via the console or CLI before CloudFormation attempts to create the resource, the behavior depends on the CloudFormation resource provider's create handler. Because Create calls CreateInstanceAccessControlAttributeConfiguration, which may return ConflictException if ABAC already exists, the stack create may fail. The resource provider for this type does not document an 'upsert' path — a console-pre-configured instance must have its ABAC config imported into the stack or deleted before CloudFormation can own it.",
+    "Ordering constraint: the IdC instance (InstanceArn) must exist before this resource can be created. The InstanceArn is a required field with no default. The documentation does not require SCIM provisioning to be active as a hard prerequisite — ABAC can be enabled before an external IdP's SCIM sync is operational, though without an active identity source and provisioned users, the attribute mappings will not evaluate against real user attributes.",
+    "CDK exposes this resource only as an L1 construct (CfnInstanceAccessControlAttributeConfiguration). There is no L2 abstraction. The L1 exposes cfnOptions (ICfnResourceOptions), which includes deletionPolicy and updateReplacePolicy. DeletionPolicy and UpdateReplacePolicy can be set via applyRemovalPolicy(). A historical CDK bug (issue 14496, fixed in CDK 1.102.0) caused the Source field to render as a nested JSONObject rather than a JSONArray, producing a CloudFormation validation failure. This bug is resolved in all current CDK versions.",
+    "The InstanceAccessControlAttributeConfiguration nested property within the resource schema has been deprecated in favor of the top-level AccessControlAttributes property. Both are supported for backwards compatibility. Using the deprecated nested property does not change runtime behavior but is flagged in the CloudFormation schema documentation."
+  ],
+  "concepts": [
+    {
+      "name": "InstanceAccessControlAttributeConfiguration",
+      "description": "The IAM Identity Center API resource (and CloudFormation resource type AWS::SSO::InstanceAccessControlAttributeConfiguration) that enables ABAC and defines the set of user attributes to be passed as principal tags when a user federates into an AWS account. Exactly one such configuration can exist per IdC instance."
+    },
+    {
+      "name": "CreateInstanceAccessControlAttributeConfiguration",
+      "description": "The sso-admin API call that enables ABAC for an IdC instance for the first time and sets the initial attribute mappings. Returns ConflictException if ABAC is already enabled. CloudFormation's create handler for this resource type calls this API."
+    },
+    {
+      "name": "UpdateInstanceAccessControlAttributeConfiguration",
+      "description": "The sso-admin API call that modifies the attribute mappings on an already-ABAC-enabled IdC instance. Called by the CloudFormation update handler when AccessControlAttributes changes without a resource replacement. Does not disable or re-enable ABAC — it only updates the attribute list."
+    },
+    {
+      "name": "DeleteInstanceAccessControlAttributeConfiguration",
+      "description": "The sso-admin API call that fully disables ABAC and removes all attribute mappings for an IdC instance. Called by the CloudFormation delete handler when the resource is removed from a stack or the stack is deleted. Immediately stops attribute propagation — ABAC-dependent policies become non-matching."
+    },
+    {
+      "name": "DescribeInstanceAccessControlAttributeConfiguration",
+      "description": "The sso-admin read-side API that returns the current ABAC status (ENABLED, CREATION_IN_PROGRESS, or CREATION_FAILED) and the configured attribute list for an IdC instance. Used by the CloudFormation resource provider's read handler to assess current state. Believed to return ResourceNotFoundException for instances with no ABAC configuration."
+    },
+    {
+      "name": "Singleton resource",
+      "description": "A CloudFormation resource pattern where only one physical resource can exist per logical scope (in this case, per IdC instance). The API enforces this — a second Create call against the same InstanceArn will fail. CloudFormation does not prevent two stacks from declaring the same InstanceArn; the conflict surfaces only at deploy time."
+    },
+    {
+      "name": "Resource replacement",
+      "description": "A CloudFormation update path where the existing resource is deleted and a new one is created, rather than updating in place. Triggered when an immutable property (InstanceArn for this resource type) is changed. For InstanceAccessControlAttributeConfiguration, replacement destroys ABAC config on the original instance."
+    },
+    {
+      "name": "NOT_CHECKED drift status",
+      "description": "The CloudFormation drift status assigned to resource types that do not support drift detection. AWS::SSO::InstanceAccessControlAttributeConfiguration receives this status. Changes made outside of CloudFormation will not be detected."
+    },
+    {
+      "name": "DeletionPolicy / UpdateReplacePolicy",
+      "description": "CloudFormation resource attributes that control what happens when a resource is deleted from a stack or replaced during an update. Setting DeletionPolicy: Retain prevents the Delete API from being called when the stack is deleted or the resource is removed. In CDK, these are set via applyRemovalPolicy() on the L1 construct's cfnOptions."
+    },
+    {
+      "name": "ConflictException",
+      "description": "An sso-admin API error returned when a write operation conflicts with a previous write. For CreateInstanceAccessControlAttributeConfiguration, this is the expected error when ABAC is already enabled on the instance. The documented recovery is retry with backoff, but in the context of a double-create (resource already exists), retry will not resolve the conflict."
+    }
+  ],
+  "tensions": [
+    "CloudFormation hides the Create/Update/Delete API distinction, making it impossible to predict which underlying API call will be made without understanding the resource provider's state-detection logic. This abstraction is normally beneficial but becomes a liability when the pre-deploy state is unknown (e.g., console-configured ABAC).",
+    "Drift detection absence creates a permanent gap between IaC-declared state and actual state. Because console and CLI changes are invisible to CloudFormation, re-applies after out-of-band changes may silently overwrite the out-of-band config or fail, depending on whether the changed property triggers an in-place update or replacement.",
+    "The singleton constraint means the resource cannot be safely owned by more than one stack. Organizations using multiple deployment pipelines (e.g., LZA customizations + a separate ABAC stack) must coordinate ownership carefully — there is no native CloudFormation mechanism to prevent two stacks from declaring this resource against the same instance.",
+    "Stack deletion deletes ABAC configuration with no warning or grace period. The default CloudFormation behavior is to delete the resource when the stack is deleted, which immediately breaks ABAC-dependent access. This is operationally dangerous for production environments where the resource should outlive any single deployment stack."
+  ],
+  "open_questions": [
+    "Does DescribeInstanceAccessControlAttributeConfiguration return ResourceNotFoundException or a specific status value when ABAC has never been configured on an instance? The documentation does not explicitly state this, and the answer determines whether the CloudFormation resource provider can safely detect pre-existing state on first deploy.",
+    "Does the CloudFormation create handler for this resource type read existing state before calling CreateInstanceAccessControlAttributeConfiguration — and if it detects an existing config, does it fall through to UpdateInstanceAccessControlAttributeConfiguration? The resource provider source was archived in August 2025 and the handler logic is not publicly documented.",
+    "What is the exact behavior of active permission set assignments that reference aws:PrincipalTag/* conditions when DeleteInstanceAccessControlAttributeConfiguration is called? The delete API documentation notes that attribute propagation stops but does not specify whether existing active sessions are affected or only new federations.",
+    "Is there a documented CloudFormation resource import path for AWS::SSO::InstanceAccessControlAttributeConfiguration? If ABAC was pre-configured via the console, can the resource be imported into a stack to establish IaC ownership without re-creating it?",
+    "Does the CloudFormation resource type support the IaC Generator feature (reverse-engineer template from existing resources)? This would be the recovery path for brownfield environments where ABAC was configured before IaC adoption."
+  ],
+  "sources": [
+    {
+      "title": "CreateInstanceAccessControlAttributeConfiguration API Reference",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateInstanceAccessControlAttributeConfiguration.html"
+    },
+    {
+      "title": "UpdateInstanceAccessControlAttributeConfiguration API Reference",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_UpdateInstanceAccessControlAttributeConfiguration.html"
+    },
+    {
+      "title": "DeleteInstanceAccessControlAttributeConfiguration API Reference",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_DeleteInstanceAccessControlAttributeConfiguration.html"
+    },
+    {
+      "title": "DescribeInstanceAccessControlAttributeConfiguration API Reference",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_DescribeInstanceAccessControlAttributeConfiguration.html"
+    },
+    {
+      "title": "AWS::SSO::InstanceAccessControlAttributeConfiguration — CloudFormation Resource Reference",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-sso-instanceaccesscontrolattributeconfiguration.html"
+    },
+    {
+      "title": "AWS::SSO::InstanceAccessControlAttributeConfiguration — CloudFormation Template Reference",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-sso-instanceaccesscontrolattributeconfiguration.html"
+    },
+    {
+      "title": "CfnInstanceAccessControlAttributeConfiguration — AWS CDK v2 API Reference",
+      "url": "https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_sso.CfnInstanceAccessControlAttributeConfiguration.html"
+    },
+    {
+      "title": "Attribute-based access control — IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac.html"
+    },
+    {
+      "title": "ABAC Configuration Checklist — IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac-checklist.html"
+    },
+    {
+      "title": "Enable and configure attributes for access control — IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/configure-abac.html"
+    },
+    {
+      "title": "Detect unmanaged configuration changes with drift detection — CloudFormation User Guide",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html"
+    },
+    {
+      "title": "Resource type support (import and drift detection) — CloudFormation User Guide",
+      "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import-supported-resources.html"
+    },
+    {
+      "title": "CDK Issue 14496: Probably wrong CfnInstanceAccessControlAttributeConfiguration Typing",
+      "url": "https://github.com/aws/aws-cdk/issues/14496"
+    },
+    {
+      "title": "aws-cloudformation-resource-providers-sso (archived August 2025)",
+      "url": "https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-sso"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "IAM Identity Center ABAC configuration, when managed via CloudFormation or CDK, has no drift detection support and a destructive default deletion behavior — a stack delete or a pre-existing console-configured ABAC state can silently break or block ABAC-dependent access with no automatic recovery path.",
+      "so_what": "If the team deploys ABAC configuration via IaC and that stack is ever deleted (intentionally or accidentally), ABAC is disabled immediately and all permission policies depending on principal tag matching stop working. There is no native CloudFormation mechanism to detect out-of-band changes. Leadership should understand that owning this resource in IaC requires explicit guardrails (DeletionPolicy: Retain, stack deletion protection) that are not set by default.",
+      "risk_level": "High",
+      "next_steps": {
+        "leadership_input_required": "Decide whether the ABAC configuration stack should have stack termination protection enforced as a policy requirement. Decide whether a DeletionPolicy: Retain must be applied to this resource across all environments.",
+        "work_to_assign": "Architects to audit all stacks containing AWS::SSO::InstanceAccessControlAttributeConfiguration and verify DeletionPolicy is set. Infra team to document which stack owns the ABAC resource and ensure no other pipeline deploys this resource against the same instance.",
+        "po_em_decision": "No product decision required — this is an infrastructure guardrail question."
+      }
+    },
+    "product_owner": {
+      "headline": "The AWS configuration that lets users' attributes (like department or team) control which AWS accounts they can access is a single, shared setting per Identity Center instance. If the infrastructure deployment stack that manages this setting is deleted, access stops working immediately for everyone relying on it — with no automatic recovery.",
+      "so_what": "This is not a setting that can be safely managed in an IaC stack without explicit protection turned on. By default, deleting the stack deletes the setting. Also, AWS has no built-in alarm or detection if someone changes this setting outside of the deployment pipeline — changes made via the AWS console are invisible to the pipeline.",
+      "risk_level": "High",
+      "next_steps": {
+        "po_em_decision": "PO/EM should confirm with the infra team that the stack managing this setting has deletion protection enabled and will not be torn down as part of normal pipeline operations.",
+        "work_to_assign": "Infra/architecture team to add DeletionPolicy: Retain to the resource and enable stack termination protection on the owning stack.",
+        "leadership_input_required": "Engineering leadership to approve the guardrail policy requiring termination protection on stacks containing identity infrastructure."
+      }
+    }
+  }
+}

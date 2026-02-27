@@ -1,0 +1,225 @@
+# IAM Identity Center InstanceAccessControlAttributeConfiguration — Schema and Configuration Surface — Product Brief
+
+**Date:** 2026-02-27
+
+---
+
+## What Is This?
+
+> This configuration makes SSM sessions automatically use each user's correct server login, without any per-user manual setup
+
+---
+
+## Next Steps
+
+**Engineering Work Items:**
+- C
+- o
+- n
+- f
+- i
+- r
+- m
+-  
+- w
+- i
+- t
+- h
+-  
+- t
+- h
+- e
+-  
+- d
+- i
+- r
+- e
+- c
+- t
+- o
+- r
+- y
+- /
+- i
+- d
+- e
+- n
+- t
+- i
+- t
+- y
+-  
+- t
+- e
+- a
+- m
+-  
+- w
+- h
+- i
+- c
+- h
+-  
+- S
+- C
+- I
+- M
+-  
+- a
+- t
+- t
+- r
+- i
+- b
+- u
+- t
+- e
+-  
+- c
+- a
+- r
+- r
+- i
+- e
+- s
+-  
+- t
+- h
+- e
+-  
+- p
+- e
+- r
+- -
+- u
+- s
+- e
+- r
+-  
+- A
+- D
+-  
+- u
+- s
+- e
+- r
+- n
+- a
+- m
+- e
+-  
+- i
+- n
+-  
+- t
+- h
+- e
+-  
+- E
+- n
+- t
+- r
+- a
+-  
+- p
+- r
+- o
+- v
+- i
+- s
+- i
+- o
+- n
+- i
+- n
+- g
+-  
+- c
+- o
+- n
+- f
+- i
+- g
+- u
+- r
+- a
+- t
+- i
+- o
+- n
+- .
+-  
+- T
+- h
+- i
+- s
+-  
+- i
+- s
+-  
+- t
+- h
+- e
+-  
+- o
+- n
+- l
+- y
+-  
+- o
+- p
+- e
+- n
+-  
+- d
+- e
+- p
+- e
+- n
+- d
+- e
+- n
+- c
+- y
+-  
+- b
+- e
+- f
+- o
+- r
+- e
+-  
+- t
+- h
+- e
+-  
+- I
+- a
+- C
+-  
+- c
+- h
+- a
+- n
+- g
+- e
+-  
+- c
+- a
+- n
+-  
+- b
+- e
+-  
+- w
+- r
+- i
+- t
+- t
+- e
+- n
+- .
+
+---
+
+*Full investigation: [investigation.md](investigation.md) — [Glossary](glossary.md)*
