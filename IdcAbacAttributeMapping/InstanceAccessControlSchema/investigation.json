@@ -1,28 +1,52 @@
 {
-  "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration — Schema and Configuration Surface",
+  "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration \u2014 Schema and Configuration Surface",
   "date": "2026-02-27",
   "status": "complete",
-  "question": "What is the high-level configuration surface of InstanceAccessControlAttributeConfiguration in IAM Identity Center for mapping a per-user SCIM-synced attribute (e.g. sAMAccountName or a custom extension attribute) to the ssm:RunAsDefaultRunAs session tag — as exposed via AWS CDK (TypeScript), CloudFormation, and AWS CLI?",
-  "context": "IAM Identity Center's Attribute-Based Access Control (ABAC) feature allows user attributes stored in or synced to the IdC identity store to be passed as principal session tags into AWS. When a user assumes a permission set role, any configured attributes are emitted as aws:PrincipalTag/<Key> values on the STS session. SSM Session Manager's RunAs feature reads the SSMSessionRunAs session tag to determine which OS user to use for a session. Connecting these two surfaces — IdC ABAC attribute configuration and the SSM session tag — is the mechanism by which a SCIM-synced AD attribute (such as sAMAccountName or a custom extension attribute) can drive per-user OS login on managed instances without any per-user IAM configuration. The InstanceAccessControlAttributeConfiguration resource is the single control plane object that enables this pipeline.",
+  "question": "What is the high-level configuration surface of InstanceAccessControlAttributeConfiguration in IAM Identity Center for mapping a per-user SCIM-synced attribute (e.g. sAMAccountName or a custom extension attribute) to the ssm:RunAsDefaultRunAs session tag \u2014 as exposed via AWS CDK (TypeScript), CloudFormation, and AWS CLI?",
+  "context": "IAM Identity Center's Attribute-Based Access Control (ABAC) feature allows user attributes stored in or synced to the IdC identity store to be passed as principal session tags into AWS. When a user assumes a permission set role, any configured attributes are emitted as aws:PrincipalTag/<Key> values on the STS session. SSM Session Manager's RunAs feature reads the SSMSessionRunAs session tag to determine which OS user to use for a session. Connecting these two surfaces \u2014 IdC ABAC attribute configuration and the SSM session tag \u2014 is the mechanism by which a SCIM-synced AD attribute (such as sAMAccountName or a custom extension attribute) can drive per-user OS login on managed instances without any per-user IAM configuration. The InstanceAccessControlAttributeConfiguration resource is the single control plane object that enables this pipeline.",
   "quick_reference": {
     "title": "Configuration Surface at a Glance",
-    "columns": ["Surface", "Resource / Command", "Key Property"],
-    "rows": [
-      ["CloudFormation", "AWS::SSO::InstanceAccessControlAttributeConfiguration", "accessControlAttributes (array of Key + Value.Source)"],
-      ["CDK TypeScript L1", "aws-cdk-lib/aws-sso.CfnInstanceAccessControlAttributeConfiguration", "accessControlAttributes (camelCase; no L2 exists)"],
-      ["CLI — create", "aws sso-admin create-instance-access-control-attribute-configuration", "--instance-access-control-attribute-configuration JSON"],
-      ["CLI — update", "aws sso-admin update-instance-access-control-attribute-configuration", "Same JSON shape as create; use when ABAC already enabled"],
-      ["Console", "IdC > Settings > Attributes for access control", "Enable button + attribute key/value form; SAML-only attrs not shown here"]
+    "columns": [
+      "Surface",
+      "Resource / Command",
+      "Key Property"
     ],
-    "notes": "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance — one configuration object exists per instance. The CLI create call returns ConflictException if ABAC is already enabled; use update instead. The InstanceArn is required on all surfaces and is obtained from the IdC console Settings page or via aws sso-admin list-instances."
+    "rows": [
+      [
+        "CloudFormation",
+        "AWS::SSO::InstanceAccessControlAttributeConfiguration",
+        "accessControlAttributes (array of Key + Value.Source)"
+      ],
+      [
+        "CDK TypeScript L1",
+        "aws-cdk-lib/aws-sso.CfnInstanceAccessControlAttributeConfiguration",
+        "accessControlAttributes (camelCase; no L2 exists)"
+      ],
+      [
+        "CLI \u2014 create",
+        "aws sso-admin create-instance-access-control-attribute-configuration",
+        "--instance-access-control-attribute-configuration JSON"
+      ],
+      [
+        "CLI \u2014 update",
+        "aws sso-admin update-instance-access-control-attribute-configuration",
+        "Same JSON shape as create; use when ABAC already enabled"
+      ],
+      [
+        "Console",
+        "IdC > Settings > Attributes for access control",
+        "Enable button + attribute key/value form; SAML-only attrs not shown here"
+      ]
+    ],
+    "notes": "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance \u2014 one configuration object exists per instance. The CLI create call returns ConflictException if ABAC is already enabled; use update instead. The InstanceArn is required on all surfaces and is obtained from the IdC console Settings page or via aws sso-admin list-instances."
   },
   "key_findings": [
-    "The AccessControlAttribute structure has exactly two fields: Key (string, 1–128 chars) and Value.Source (single-item string array, 0–256 chars per item). Key is the name the attribute will carry as a principal tag. Value.Source contains a ${path:...} expression for SCIM-synced identity store attributes or a literal identity source token. The Key value becomes the principal tag key verbatim on the STS session.",
-    "For SCIM-synced identity store attributes (external IdP + Entra SCIM), Source uses ${path:...} expressions: e.g. ${path:userName}, ${path:enterprise.department}, ${path:enterprise.employeeNumber}. For AWS Managed Microsoft AD-connected instances, Source uses flat dollar-brace syntax: ${samaccountname}, ${userprincipalname}, ${mail}. These two syntaxes are distinct and not interchangeable. The correct path for a sAMAccountName-derived attribute depends on where Entra places it in its SCIM payload — not on the AD attribute name itself.",
-    "The AccessControlAttributes array is capped at 50 items and the entire configuration is a singleton per IdC instance. There is exactly one InstanceAccessControlAttributeConfiguration per instance. The list is replaced in full on every update — there is no per-attribute add/remove API. Omitting an existing attribute from an update call deletes it silently.",
+    "The AccessControlAttribute structure has exactly two fields: Key (string, 1\u2013128 chars) and Value.Source (single-item string array, 0\u2013256 chars per item). Key is the name the attribute will carry as a principal tag. Value.Source contains a ${path:...} expression for SCIM-synced identity store attributes or a literal identity source token. The Key value becomes the principal tag key verbatim on the STS session.",
+    "For SCIM-synced identity store attributes (external IdP + Entra SCIM), Source uses ${path:...} expressions: e.g. ${path:userName}, ${path:enterprise.department}, ${path:enterprise.employeeNumber}. For AWS Managed Microsoft AD-connected instances, Source uses flat dollar-brace syntax: ${samaccountname}, ${userprincipalname}, ${mail}. These two syntaxes are distinct and not interchangeable. The correct path for a sAMAccountName-derived attribute depends on where Entra places it in its SCIM payload \u2014 not on the AD attribute name itself.",
+    "The AccessControlAttributes array is capped at 50 items and the entire configuration is a singleton per IdC instance. There is exactly one InstanceAccessControlAttributeConfiguration per instance. The list is replaced in full on every update \u2014 there is no per-attribute add/remove API. Omitting an existing attribute from an update call deletes it silently.",
     "Create vs Update: CreateInstanceAccessControlAttributeConfiguration enables ABAC and seeds the attribute list (call once per instance). UpdateInstanceAccessControlAttributeConfiguration replaces the attribute list on an already-enabled instance. Calling create on an instance where ABAC is already enabled returns ConflictException (HTTP 400). Calling update on an instance where ABAC has never been enabled returns ResourceNotFoundException. DescribeInstanceAccessControlAttributeConfiguration is the correct pre-check to determine which call to use.",
     "The CloudFormation resource has a deprecated top-level property InstanceAccessControlAttributeConfiguration; use the flat AccessControlAttributes property instead. CDK's L1 construct (CfnInstanceAccessControlAttributeConfiguration) exposes accessControlAttributes (flat array, current) and instanceAccessControlAttributeConfiguration (deprecated, backwards compat only). No L2 construct exists for this resource in aws-cdk-lib as of 2026.",
-    "The attribute Key name set in AccessControlAttribute is the exact string that appears as aws:PrincipalTag/<Key> and as the SSM session tag name. For SSM RunAs: Key must be exactly 'SSMSessionRunAs' — SSM reads this tag name to select the OS user. Casing is significant. Note: the string ssm:RunAsDefaultRunAs appears in SSM user guide content and blog posts (e.g. in session preferences documentation) but has not been confirmed as a formally listed condition key in the AWS Service Authorization Reference condition key table for Systems Manager.",
+    "The attribute Key name set in AccessControlAttribute is the exact string that appears as aws:PrincipalTag/<Key> and as the SSM session tag name. For SSM RunAs: Key must be exactly 'SSMSessionRunAs' \u2014 SSM reads this tag name to select the OS user. Casing is significant. Note: the string ssm:RunAsDefaultRunAs appears in SSM user guide content and blog posts (e.g. in session preferences documentation) but has not been confirmed as a formally listed condition key in the AWS Service Authorization Reference condition key table for Systems Manager.",
     "The InstanceArn required on all surfaces is the ARN of the IAM Identity Center instance in the form arn:aws:sso:::instance/(sso)?ins-[a-zA-Z0-9-.]{16}. It is available in the IdC console under Settings or programmatically via aws sso-admin list-instances. It is not a Ref-able resource created in the same stack and must be passed as a parameter or resolved via CDK context.",
     "Console path for Attributes for access control: IAM Identity Center > Settings > Attributes for access control tab. Clicking Enable initializes ABAC. Attributes arriving only through SAML assertions (not stored in the IdC identity store) are not displayed in this console view even if they are active as session tags. The describe-instance-access-control-attribute-configuration CLI call is the authoritative check."
   ],
@@ -61,97 +85,113 @@
     }
   ],
   "tensions": [
-    "The Source path for a sAMAccountName-derived attribute is not simply ${path:samaccountname} — the correct path depends on how Entra ID maps the AD attribute into its SCIM payload before syncing to IdC. If sAMAccountName is mapped to a custom enterprise extension field, the path would be ${path:enterprise.<customFieldName>}. This dependency is controlled by Entra provisioning attribute mapping configuration and must be confirmed before the Source value can be written.",
+    "The Source path for a sAMAccountName-derived attribute is not simply ${path:samaccountname} \u2014 the correct path depends on how Entra ID maps the AD attribute into its SCIM payload before syncing to IdC. If sAMAccountName is mapped to a custom enterprise extension field, the path would be ${path:enterprise.<customFieldName>}. This dependency is controlled by Entra provisioning attribute mapping configuration and must be confirmed before the Source value can be written.",
     "UpdateInstanceAccessControlAttributeConfiguration replaces the entire AccessControlAttributes list, creating a coordination hazard in shared IdC instances. Concurrent deployments from multiple stacks or teams risk silently overwriting each other's attributes. There is no merge or partial-update API surface.",
-    "If ABAC was previously enabled manually in the IdC console, a CloudFormation or CDK stack deploying this resource will fail with ConflictException because the create call conflicts with the existing singleton. The resource must be imported into the stack before IaC management can proceed — a non-trivial remediation in LZA-managed environments.",
-    "Attributes delivered purely via SAML assertions — not stored in the IdC identity store and not configured in AccessControlAttributeConfiguration — are functional as session tags but invisible in the Attributes for access control console view. This creates a discoverability gap where a working configuration appears incomplete or absent in the console."
+    "If ABAC was previously enabled manually in the IdC console, a CloudFormation or CDK stack deploying this resource will fail with ConflictException because the create call conflicts with the existing singleton. The resource must be imported into the stack before IaC management can proceed \u2014 a non-trivial remediation in LZA-managed environments.",
+    "Attributes delivered purely via SAML assertions \u2014 not stored in the IdC identity store and not configured in AccessControlAttributeConfiguration \u2014 are functional as session tags but invisible in the Attributes for access control console view. This creates a discoverability gap where a working configuration appears incomplete or absent in the console."
   ],
   "open_questions": [
-    "What is the exact Entra ID SCIM provisioning mapping for sAMAccountName — which SCIM schema field does Entra write sAMAccountName into when provisioning users to IdC? This determines the correct ${path:...} Source value.",
+    "What is the exact Entra ID SCIM provisioning mapping for sAMAccountName \u2014 which SCIM schema field does Entra write sAMAccountName into when provisioning users to IdC? This determines the correct ${path:...} Source value.",
     "Does LZA's IdC configuration surface expose any mechanism to manage InstanceAccessControlAttributeConfiguration, or must this resource always be deployed outside of the LZA customizations pipeline?",
-    "What is the behavior when a user's identity store attribute referenced in a Source path is null or empty — does IdC emit an empty tag, omit the tag entirely, or block session issuance?",
+    "What is the behavior when a user's identity store attribute referenced in a Source path is null or empty \u2014 does IdC emit an empty tag, omit the tag entirely, or block session issuance?",
     "Are there documented quota increase paths for the 50-attribute limit, or is 50 a hard service ceiling?",
     "Does the CloudFormation resource type support stack import for environments where ABAC was manually enabled prior to IaC adoption?",
-    "Is ssm:RunAsDefaultRunAs a formally listed IAM condition key in the AWS Service Authorization Reference condition key table for Systems Manager? The string appears in SSM user guide content and blog posts but was not found in the SAR condition key list during validation. Its exact role — whether it is a valid IAM condition key usable in permission set policies, a documentation label only, or something else — is unconfirmed."
+    "Is ssm:RunAsDefaultRunAs a formally listed IAM condition key in the AWS Service Authorization Reference condition key table for Systems Manager? The string appears in SSM user guide content and blog posts but was not found in the SAR condition key list during validation. Its exact role \u2014 whether it is a valid IAM condition key usable in permission set policies, a documentation label only, or something else \u2014 is unconfirmed."
   ],
   "sources": [
     {
-      "title": "AWS CloudFormation — AWS::SSO::InstanceAccessControlAttributeConfiguration resource reference",
+      "title": "AWS CloudFormation \u2014 AWS::SSO::InstanceAccessControlAttributeConfiguration resource reference",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-sso-instanceaccesscontrolattributeconfiguration.html"
     },
     {
-      "title": "AWS CloudFormation — AccessControlAttribute property type",
+      "title": "AWS CloudFormation \u2014 AccessControlAttribute property type",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-sso-instanceaccesscontrolattributeconfiguration-accesscontrolattribute.html"
     },
     {
-      "title": "AWS CloudFormation — AccessControlAttributeValue property type",
+      "title": "AWS CloudFormation \u2014 AccessControlAttributeValue property type",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-sso-instanceaccesscontrolattributeconfiguration-accesscontrolattributevalue.html"
     },
     {
-      "title": "IAM Identity Center API Reference — CreateInstanceAccessControlAttributeConfiguration",
+      "title": "IAM Identity Center API Reference \u2014 CreateInstanceAccessControlAttributeConfiguration",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center API Reference — UpdateInstanceAccessControlAttributeConfiguration",
+      "title": "IAM Identity Center API Reference \u2014 UpdateInstanceAccessControlAttributeConfiguration",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_UpdateInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center API Reference — InstanceAccessControlAttributeConfiguration data type",
+      "title": "IAM Identity Center API Reference \u2014 InstanceAccessControlAttributeConfiguration data type",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_InstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "AWS CLI reference — create-instance-access-control-attribute-configuration",
+      "title": "AWS CLI reference \u2014 create-instance-access-control-attribute-configuration",
       "url": "https://docs.aws.amazon.com/cli/latest/reference/sso-admin/create-instance-access-control-attribute-configuration.html"
     },
     {
-      "title": "AWS CLI reference — update-instance-access-control-attribute-configuration",
+      "title": "AWS CLI reference \u2014 update-instance-access-control-attribute-configuration",
       "url": "https://docs.aws.amazon.com/cli/latest/reference/sso-admin/update-instance-access-control-attribute-configuration.html"
     },
     {
-      "title": "AWS CDK v2 — CfnInstanceAccessControlAttributeConfiguration construct",
+      "title": "AWS CDK v2 \u2014 CfnInstanceAccessControlAttributeConfiguration construct",
       "url": "https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_sso.CfnInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center User Guide — Attributes for access control",
+      "title": "IAM Identity Center User Guide \u2014 Attributes for access control",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/attributesforaccesscontrol.html"
     },
     {
-      "title": "IAM Identity Center User Guide — Attribute mappings concept",
+      "title": "IAM Identity Center User Guide \u2014 Attribute mappings concept",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/attributemappingsconcept.html"
     },
     {
-      "title": "AWS Security Blog — Configure AWS IAM Identity Center ABAC for EC2 and Systems Manager Session Manager",
+      "title": "AWS Security Blog \u2014 Configure AWS IAM Identity Center ABAC for EC2 and Systems Manager Session Manager",
       "url": "https://aws.amazon.com/blogs/security/configure-aws-sso-abac-for-ec2-instances-and-systems-manager-session-manager/"
     },
     {
-      "title": "AWS MT Blog — Configure Session Manager access for federated users using SAML session tags",
+      "title": "AWS MT Blog \u2014 Configure Session Manager access for federated users using SAML session tags",
       "url": "https://aws.amazon.com/blogs/mt/configure-session-manager-access-for-federated-users-using-saml-session-tags/"
     },
     {
-      "title": "IAM Identity Center User Guide — Enable and configure attributes for access control",
+      "title": "IAM Identity Center User Guide \u2014 Enable and configure attributes for access control",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/configure-abac.html"
     }
   ],
   "audience_briefs": {
     "engineering_leadership": {
-      "headline": "IAM Identity Center's ABAC attribute configuration is the single IaC control plane object that wires a per-user AD attribute to the OS login used in SSM sessions",
-      "summary": "InstanceAccessControlAttributeConfiguration is a singleton resource (one per IdC instance) that maps identity store attributes to session tags. Configured with Key = 'SSMSessionRunAs' pointing at a SCIM-synced user attribute, every IdC session automatically carries the correct OS username as a principal tag — enabling SSM RunAs to route each user to their personal Linux account without any per-user IAM configuration. The resource is fully manageable via CloudFormation, CDK L1 construct, or CLI.",
-      "risk": "Low — this is a non-destructive configuration addition. Primary operational risk is the create/update API split: if ABAC was previously enabled manually, the IaC deployment will fail with ConflictException until the existing resource is imported into the stack. Secondary risk is update-replaces-all semantics: any deployment that omits an existing attribute will silently delete it.",
-      "next_steps": {
-        "leadership_decision": "Authorize the IdC ABAC configuration as a standalone IaC change, separate from the LZA customizations pipeline. This resource must be deployed outside LZA.",
-        "work_to_assign": "Architects/Windows-infra team: confirm the Entra SCIM attribute path for sAMAccountName before writing the Source value. Platform team: assess whether IdC ABAC is already enabled in the target instance and determine if a CloudFormation import step is required before deployment.",
-        "leadership_input_required": "Confirm whether multiple teams share the same IdC instance — if yes, a coordination gate is needed because each update replaces the full attribute list."
-      }
+      "headline": "IAM Identity Center's ABAC attribute configuration is the single IaC control plane object that wires a SCIM-synced per-user AD attribute to the OS login used in SSM sessions",
+      "so_what": "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance that maps identity store attributes to session tags. Configured with Key = SSMSessionRunAs pointing at a SCIM-synced user attribute, every IdC session carries the correct OS username as a principal tag \u2014 enabling SSM RunAs per-user routing without any per-user IAM configuration. The create/update API split means IaC deployments against instances with existing console-configured ABAC will fail with ConflictException until the resource is imported.",
+      "bullets": [
+        "Singleton per IdC instance \u2014 one resource, one owning stack. Multiple pipelines writing to the same instance will conflict.",
+        "Key must be exactly SSMSessionRunAs (casing is significant) \u2014 any variation silently breaks SSM RunAs routing.",
+        "Source path syntax differs by identity source type \u2014 ${path:...} for Entra SCIM, ${samaccountname} for AWS Managed AD. Mixing these produces silent mismatch.",
+        "Update replaces the full attribute list \u2014 omitting an existing attribute in a redeployment silently deletes it.",
+        "Only an L1 CDK construct exists \u2014 no higher-level abstraction is available as of 2026."
+      ],
+      "action_required": "Authorize IdC ABAC configuration as a standalone IaC change outside the LZA customizations pipeline. Confirm whether multiple teams share the same IdC instance \u2014 if yes, a coordination gate is required before any attribute list update. Confirm SCIM attribute path for sAMAccountName with the identity team before the IaC change is written."
     },
     "product_owner": {
-      "headline": "This configuration makes SSM sessions automatically use each user's correct server login, without any per-user manual setup",
-      "summary": "When engineers start an SSM session on a managed server, the session needs to use their personal OS account. The ABAC attribute configuration tells AWS to look up the user's directory username at sign-in time and pass it automatically to the server session. Each engineer's session then uses their own account — no manual mapping, no shared credentials. This is a required building block for the SSMSessionRunAs fix identified in prior investigation.",
-      "risk": "Low operational risk. The configuration change does not affect who can access servers — only which OS user is active once access is granted. The one deployment caution is that if this feature was previously enabled manually in the AWS console, an extra import step is required before automated deployment can proceed.",
+      "headline": "This configuration makes SSM sessions automatically use each engineer's correct server OS account, without any per-user manual setup",
+      "so_what": "When engineers start an SSM session on a managed server, the session needs to use their personal OS account. This AWS setting looks up the user's directory username at sign-in and passes it automatically to the server \u2014 no manual mapping, no shared credentials. It is a required building block for the SSMSessionRunAs fix identified in the prior investigation. One open dependency remains before the configuration can be written.",
+      "bullets": [
+        "Each engineer's server session uses their own OS account automatically \u2014 no admin needs to configure per-user mappings.",
+        "This is a shared, singleton setting \u2014 it cannot be managed by multiple deployment pipelines simultaneously.",
+        "One open dependency: the Identity team must confirm which directory attribute field carries the per-user OS username in the Entra SCIM setup.",
+        "If this feature was previously enabled manually in the AWS console, an extra import step is required before automated deployment can proceed.",
+        "Once the dependency is resolved, this is a pure infrastructure change \u2014 no product feature work is required."
+      ],
+      "risk_level": "Low",
       "next_steps": {
-        "po_em_decision": "No product decision required from PO/EM. This is a pure infrastructure configuration change.",
-        "work_to_assign": "Confirm with the directory/identity team which SCIM attribute carries the per-user AD username in the Entra provisioning configuration. This is the only open dependency before the IaC change can be written.",
-        "leadership_input_required": "None — this is a technical implementation task once the SCIM attribute path is confirmed."
-      }
+        "po_action": "No product decision required from PO/EM. Confirm with the identity team that the SCIM attribute path dependency is being resolved.",
+        "work_to_assign": [
+          "Identity team: confirm which SCIM attribute field carries the per-user OS username (sAMAccountName) in the Entra provisioning configuration \u2014 this is the only remaining dependency before the IaC change can be written.",
+          "Platform team: assess whether IdC ABAC is already enabled in the target instance and determine if a CloudFormation import step is required before first deployment."
+        ],
+        "leadership_input": null
+      },
+      "questions_to_ask_engineering": [
+        "Has the Entra SCIM attribute path for the per-user OS username been confirmed \u2014 and if so, what is it?",
+        "Is ABAC already enabled in the Identity Center instance, and do we need an import step before deploying via CloudFormation?"
+      ]
     }
   }
 }
