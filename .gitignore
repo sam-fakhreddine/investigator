@@ -19,8 +19,8 @@
 !templates/
 !templates/**
 
-!Gators/
-!Gators/**
-Gators/hooks/__pycache__/
-Gators/**/__pycache__/
+!gators/
+!gators/**
+gators/hooks/__pycache__/
+gators/**/__pycache__/
 

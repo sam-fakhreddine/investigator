@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 Gators/hooks/post_tool_use.py"
+            "command": "python3 gators/hooks/post_tool_use.py"
           }
         ]
       }
@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 Gators/hooks/teammate_idle.py"
+            "command": "python3 gators/hooks/teammate_idle.py"
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 Gators/hooks/task_completed.py"
+            "command": "python3 gators/hooks/task_completed.py"
           }
         ]
       }

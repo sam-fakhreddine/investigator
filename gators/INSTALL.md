@@ -21,7 +21,7 @@ Open `.claude/settings.local.json` and add the `env` block. If the file already 
 }
 ```
 
-The full diff to merge is in `Gators/settings-patch.json`. The simplest way to apply it without losing existing settings is to open the file in an editor and copy the two top-level keys (`env`, `hooks`) into your existing JSON.
+The full diff to merge is in `gators/settings-patch.json`. The simplest way to apply it without losing existing settings is to open the file in an editor and copy the two top-level keys (`env`, `hooks`) into your existing JSON.
 
 Do not replace the entire `settings.local.json` — the file already contains `permissions.allow` entries that must be preserved.
 
@@ -57,11 +57,11 @@ The three hooks enforce pipeline quality gates automatically:
 
 | Hook | File | When it fires | What it does |
 |------|------|---------------|--------------|
-| `PostToolUse` | `Gators/hooks/post_tool_use.py` | After any Write or Edit tool call | Checks that `investigation.json` and `investigation.md` are in sync; exits 2 and blocks if they have drifted |
-| `TeammateIdle` | `Gators/hooks/teammate_idle.py` | When a teammate is about to go idle | Checks whether the teammate's assigned task is complete and all required output files exist; exits 2 with feedback if the teammate stopped early |
-| `TaskCompleted` | `Gators/hooks/task_completed.py` | When a task is being marked complete | Enforces quality gates (sync check, required files, validation report present) before allowing the task to close |
+| `PostToolUse` | `gators/hooks/post_tool_use.py` | After any Write or Edit tool call | Checks that `investigation.json` and `investigation.md` are in sync; exits 2 and blocks if they have drifted |
+| `TeammateIdle` | `gators/hooks/teammate_idle.py` | When a teammate is about to go idle | Checks whether the teammate's assigned task is complete and all required output files exist; exits 2 with feedback if the teammate stopped early |
+| `TaskCompleted` | `gators/hooks/task_completed.py` | When a task is being marked complete | Enforces quality gates (sync check, required files, validation report present) before allowing the task to close |
 
-Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `Gators/settings-patch.json` under the `"hooks"` key:
+Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `gators/settings-patch.json` under the `"hooks"` key:
 
 ```json
 {
@@ -72,7 +72,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `Ga
         "hooks": [
           {
             "type": "command",
-            "command": "python3 Gators/hooks/post_tool_use.py"
+            "command": "python3 gators/hooks/post_tool_use.py"
           }
         ]
       }
@@ -82,7 +82,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `Ga
         "hooks": [
           {
             "type": "command",
-            "command": "python3 Gators/hooks/teammate_idle.py"
+            "command": "python3 gators/hooks/teammate_idle.py"
           }
         ]
       }
@@ -92,7 +92,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `Ga
         "hooks": [
           {
             "type": "command",
-            "command": "python3 Gators/hooks/task_completed.py"
+            "command": "python3 gators/hooks/task_completed.py"
           }
         ]
       }
@@ -101,7 +101,7 @@ Add the `hooks` block to `.claude/settings.local.json`. The exact JSON is in `Ga
 }
 ```
 
-Important: all commands are relative to the repo root. Claude Code resolves hook commands from the project's working directory, so `Gators/hooks/post_tool_use.py` is correct as written — do not use absolute paths or `./` prefixes.
+Important: all commands are relative to the repo root. Claude Code resolves hook commands from the project's working directory, so `gators/hooks/post_tool_use.py` is correct as written — do not use absolute paths or `./` prefixes.
 
 `TeammateIdle` and `TaskCompleted` do not support matchers. Any `matcher` field added to those events is silently ignored by Claude Code.
 
@@ -115,7 +115,7 @@ Skills live in `.claude/skills/`. Create the directory if it does not exist, the
 
 ```bash
 mkdir -p /Users/samfakhreddine/repos/research/.claude/skills
-cp Gators/SKILL.md .claude/skills/gators.md
+cp gators/SKILL.md .claude/skills/gators.md
 ```
 
 The skill file tells Claude Code how to respond to `/gators <question>`. It instructs the lead to:
@@ -126,7 +126,7 @@ The skill file tells Claude Code how to respond to `/gators <question>`. It inst
 5. Monitor progress and apply remediation if the validator returns `CONTRADICTED` or material `UNVERIFIED` verdicts
 6. Synthesize findings for the user once both tasks are complete and `validation_report.md` is present
 
-The skill source is `Gators/SKILL.md`. It is installed as `gator.md` under `.claude/skills/` — the filename (without `.md`) becomes the slash command name.
+The skill source is `gators/SKILL.md`. It is installed as `gator.md` under `.claude/skills/` — the filename (without `.md`) becomes the slash command name.
 
 ---
 
@@ -148,9 +148,9 @@ The status output should show `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the en
 
 Type `/hooks` in Claude Code. You should see three entries:
 
-- `PostToolUse` — matcher `Write|Edit` — `python3 Gators/hooks/post_tool_use.py`
-- `TeammateIdle` — no matcher — `python3 Gators/hooks/teammate_idle.py`
-- `TaskCompleted` — no matcher — `python3 Gators/hooks/task_completed.py`
+- `PostToolUse` — matcher `Write|Edit` — `python3 gators/hooks/post_tool_use.py`
+- `TeammateIdle` — no matcher — `python3 gators/hooks/teammate_idle.py`
+- `TaskCompleted` — no matcher — `python3 gators/hooks/task_completed.py`
 
 If a hook is missing, check that the `hooks` block in `settings.local.json` is valid JSON (no trailing commas, balanced braces) and restart the session.
 
@@ -168,7 +168,7 @@ Then run the hook script directly:
 
 ```bash
 echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/test_hook_investigation.json"}}' \
-  | python3 Gators/hooks/post_tool_use.py
+  | python3 gators/hooks/post_tool_use.py
 echo "Exit code: $?"
 ```
 
