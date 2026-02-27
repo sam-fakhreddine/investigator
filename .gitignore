@@ -13,9 +13,9 @@
 !assets/
 !assets/**
 
-!_scripts/
-!_scripts/**
+!scripts/
+!scripts/**
 
-!_templates/
-!_templates/**
+!templates/
+!templates/**
 

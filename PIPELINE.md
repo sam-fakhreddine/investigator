@@ -67,7 +67,7 @@ A broad question like "tell me about cloud security" must be narrowed before pro
 mkdir <PascalCase name>
 ```
 
-Use PascalCase — no hyphens, underscores, or spaces. Examples: `MsDefenderAwsExclusions`, `AwsIamPrivilegeEscalation.
+Use PascalCase — no hyphens, underscores, or spaces. Examples: `MsDefenderAwsExclusions`, `AwsIamPrivilegeEscalation`.
 
 ### 3. Spawn the investigation agent
 
@@ -149,13 +149,13 @@ When OUT_OF_SYNC, the script prints exactly which items are in JSON but missing 
 
 **Fields checked:** `key_findings`, `tensions`, `open_questions`, `sources`, `concepts`
 
-**Not checked:** `question`, `context`, `quick_reference` — these are rendered verbatim and drift would only occur from hand-editing the markdown (which is prohibited).
+**Not checked:** `topic`, `date`, `status`, `question`, `context`, `quick_reference`, and `audience_briefs` content — these are either rendered verbatim or only checked for file existence. Drift in these fields would only occur from hand-editing the markdown (which is prohibited).
 
 ---
 
 ## JSON Schema
 
-Full field reference. All fields except `quick_reference` and `audience_briefs` are required for a complete investigation.
+Full field reference. The script enforces five required fields (`topic`, `date`, `status`, `question`, `context`) — missing any of these exits with code 2. All other fields (`key_findings`, `concepts`, `tensions`, `open_questions`, `sources`) are not script-enforced but are required for a complete investigation. `quick_reference` and `audience_briefs` are conditional.
 
 ```jsonc
 {
