@@ -1,310 +1,54 @@
 # IAM Identity Center InstanceAccessControlAttributeConfiguration — Schema, Configuration Surface, Drift, and Idempotency — Product Brief
 
 **Date:** 2026-02-27
+**Risk Level:** HIGH
 
 ---
 
 ## What Is This?
 
-> The AWS setting that lets users' directory attributes drive which OS account is used in SSM sessions is a single shared control per Identity Center instance — if the stack managing it is deleted, per-user session routing stops immediately for everyone
+> The setting that routes each engineer to their own server OS account is a single shared control — deleting the stack that manages it breaks server access routing for everyone instantly, with no warning
+
+---
+
+## What Does This Mean for Us?
+
+When engineers start an SSM session on a managed server, the session needs to use their personal OS account. This AWS setting looks up the user's directory username at sign-in and passes it automatically to the server. It is a required building block for the SSMSessionRunAs fix. If the owning infrastructure stack is accidentally deleted, per-user session routing stops immediately for all engineers — there is no automatic recovery and no built-in alarm.
+
+---
+
+## Key Points
+
+- This is a shared, singleton setting — it cannot be owned by multiple deployment pipelines at the same time.
+- Deleting the infrastructure stack that manages this setting disables per-user session routing with no grace period or rollback warning.
+- AWS does not automatically detect or alert when this setting is changed outside the deployment pipeline.
+- One open technical dependency remains before the configuration can be written: the Identity (Entra) team must confirm which directory attribute field carries the per-user OS username in the SCIM provisioning setup.
+- Once the dependency is resolved, this is a pure infrastructure change — no product feature work is required.
 
 ---
 
 ## Next Steps
 
+**PO/EM Decision:**
+
+> PO/EM to confirm with the infra team that deletion protection is enabled on the stack managing this setting before it goes to production.
+
 **Engineering Work Items:**
-- I
-- n
-- f
-- r
-- a
-- /
-- a
-- r
-- c
-- h
-- i
-- t
-- e
-- c
-- t
-- u
-- r
-- e
--  
-- t
-- e
-- a
-- m
--  
-- t
-- o
--  
-- a
-- d
-- d
--  
-- D
-- e
-- l
-- e
-- t
-- i
-- o
-- n
-- P
-- o
-- l
-- i
-- c
-- y
-- :
--  
-- R
-- e
-- t
-- a
-- i
-- n
--  
-- t
-- o
--  
-- t
-- h
-- e
--  
-- r
-- e
-- s
-- o
-- u
-- r
-- c
-- e
--  
-- a
-- n
-- d
--  
-- e
-- n
-- a
-- b
-- l
-- e
--  
-- s
-- t
-- a
-- c
-- k
--  
-- t
-- e
-- r
-- m
-- i
-- n
-- a
-- t
-- i
-- o
-- n
--  
-- p
-- r
-- o
-- t
-- e
-- c
-- t
-- i
-- o
-- n
--  
-- o
-- n
--  
-- t
-- h
-- e
--  
-- o
-- w
-- n
-- i
-- n
-- g
--  
-- s
-- t
-- a
-- c
-- k
-- .
--  
-- I
-- d
-- e
-- n
-- t
-- i
-- t
-- y
--  
-- t
-- e
-- a
-- m
--  
-- t
-- o
--  
-- c
-- o
-- n
-- f
-- i
-- r
-- m
--  
-- t
-- h
-- e
--  
-- E
-- n
-- t
-- r
-- a
--  
-- S
-- C
-- I
-- M
--  
-- a
-- t
-- t
-- r
-- i
-- b
-- u
-- t
-- e
--  
-- p
-- a
-- t
-- h
--  
-- f
-- o
-- r
--  
-- s
-- A
-- M
-- A
-- c
-- c
-- o
-- u
-- n
-- t
-- N
-- a
-- m
-- e
--  
-- —
--  
-- t
-- h
-- i
-- s
--  
-- i
-- s
--  
-- t
-- h
-- e
--  
-- o
-- n
-- l
-- y
--  
-- r
-- e
-- m
-- a
-- i
-- n
-- i
-- n
-- g
--  
-- t
-- e
-- c
-- h
-- n
-- i
-- c
-- a
-- l
--  
-- d
-- e
-- p
-- e
-- n
-- d
-- e
-- n
-- c
-- y
--  
-- b
-- e
-- f
-- o
-- r
-- e
--  
-- t
-- h
-- e
--  
-- I
-- a
-- C
--  
-- c
-- h
-- a
-- n
-- g
-- e
--  
-- c
-- a
-- n
--  
-- b
-- e
--  
-- w
-- r
-- i
-- t
-- t
-- e
-- n
-- .
+- Identity team: confirm the Entra SCIM attribute path for the per-user OS username (sAMAccountName) — this is the only remaining dependency before the IaC change can be written.
+- Infra/architecture team: add DeletionPolicy: Retain to the resource and enable stack termination protection on the owning stack.
+- Platform team: assess whether IdC ABAC is already enabled in the target instance and determine if a CloudFormation import step is required before first deployment.
+
+**Leadership Input Required:**
+
+> Engineering leadership to approve the guardrail policy requiring termination protection on stacks containing identity infrastructure.
+
+---
+
+## Open Questions
+
+- Has the Entra SCIM attribute path for the per-user OS username been confirmed — and if so, what is it?
+- Is ABAC already enabled in the Identity Center instance, and do we need an import step before deploying via CloudFormation?
+- Which team owns the stack that will manage this resource, and is deletion protection already in place?
 
 ---
 

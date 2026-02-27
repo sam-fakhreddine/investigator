@@ -1,32 +1,60 @@
 {
-  "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration — Schema, Configuration Surface, Drift, and Idempotency",
+  "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration \u2014 Schema, Configuration Surface, Drift, and Idempotency",
   "date": "2026-02-27",
   "status": "complete",
-  "question": "What is the high-level configuration surface and operational behavior of IAM Identity Center's InstanceAccessControlAttributeConfiguration — covering the attribute schema (CDK TypeScript, CloudFormation, CLI, console), the create/update/delete API distinction, and drift and idempotency behavior — for teams mapping a per-user SCIM-synced attribute to the SSMSessionRunAs session tag?",
-  "context": "IAM Identity Center's Attribute-Based Access Control (ABAC) feature allows user attributes stored in or synced to the IdC identity store to be passed as principal session tags into AWS. When a user assumes a permission set role, configured attributes are emitted as aws:PrincipalTag/<Key> values on the STS session. SSM Session Manager's RunAs feature reads the SSMSessionRunAs session tag to determine which OS user to use for a session. Connecting IdC ABAC attribute configuration and the SSM session tag — via a SCIM-synced AD attribute such as sAMAccountName — enables per-user OS login on managed instances without any per-user IAM configuration. The InstanceAccessControlAttributeConfiguration resource is the single control plane object that enables this pipeline. Because it is a singleton per IdC instance and exposes a create/update/delete API with no drift detection support, its IaC lifecycle has non-obvious failure modes that must be understood before deployment.",
+  "question": "What is the high-level configuration surface and operational behavior of IAM Identity Center's InstanceAccessControlAttributeConfiguration \u2014 covering the attribute schema (CDK TypeScript, CloudFormation, CLI, console), the create/update/delete API distinction, and drift and idempotency behavior \u2014 for teams mapping a per-user SCIM-synced attribute to the SSMSessionRunAs session tag?",
+  "context": "IAM Identity Center's Attribute-Based Access Control (ABAC) feature allows user attributes stored in or synced to the IdC identity store to be passed as principal session tags into AWS. When a user assumes a permission set role, configured attributes are emitted as aws:PrincipalTag/<Key> values on the STS session. SSM Session Manager's RunAs feature reads the SSMSessionRunAs session tag to determine which OS user to use for a session. Connecting IdC ABAC attribute configuration and the SSM session tag \u2014 via a SCIM-synced AD attribute such as sAMAccountName \u2014 enables per-user OS login on managed instances without any per-user IAM configuration. The InstanceAccessControlAttributeConfiguration resource is the single control plane object that enables this pipeline. Because it is a singleton per IdC instance and exposes a create/update/delete API with no drift detection support, its IaC lifecycle has non-obvious failure modes that must be understood before deployment.",
   "quick_reference": {
     "title": "Configuration Surface at a Glance",
-    "columns": ["Surface", "Resource / Command", "Key Property"],
-    "rows": [
-      ["CloudFormation", "AWS::SSO::InstanceAccessControlAttributeConfiguration", "accessControlAttributes (array of Key + Value.Source)"],
-      ["CDK TypeScript L1", "aws-cdk-lib/aws-sso.CfnInstanceAccessControlAttributeConfiguration", "accessControlAttributes (camelCase; no L2 exists)"],
-      ["CLI — create", "aws sso-admin create-instance-access-control-attribute-configuration", "--instance-access-control-attribute-configuration JSON (first-time enable only)"],
-      ["CLI — update", "aws sso-admin update-instance-access-control-attribute-configuration", "Same JSON shape as create; use when ABAC already enabled"],
-      ["CLI — delete", "aws sso-admin delete-instance-access-control-attribute-configuration", "Disables ABAC entirely and removes all mappings — no grace period"],
-      ["Console", "IdC > Settings > Attributes for access control", "Enable button + attribute key/value form; SAML-only attrs not shown here"]
+    "columns": [
+      "Surface",
+      "Resource / Command",
+      "Key Property"
     ],
-    "notes": "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance. The CLI create call returns ConflictException if ABAC is already enabled — use update instead. CloudFormation drift detection is NOT supported for this resource type (status: NOT_CHECKED). Stack deletion calls DeleteInstanceAccessControlAttributeConfiguration and immediately disables ABAC — apply DeletionPolicy: Retain to prevent this. The InstanceArn is required on all surfaces and is obtained from the IdC console Settings page or via aws sso-admin list-instances."
+    "rows": [
+      [
+        "CloudFormation",
+        "AWS::SSO::InstanceAccessControlAttributeConfiguration",
+        "accessControlAttributes (array of Key + Value.Source)"
+      ],
+      [
+        "CDK TypeScript L1",
+        "aws-cdk-lib/aws-sso.CfnInstanceAccessControlAttributeConfiguration",
+        "accessControlAttributes (camelCase; no L2 exists)"
+      ],
+      [
+        "CLI \u2014 create",
+        "aws sso-admin create-instance-access-control-attribute-configuration",
+        "--instance-access-control-attribute-configuration JSON (first-time enable only)"
+      ],
+      [
+        "CLI \u2014 update",
+        "aws sso-admin update-instance-access-control-attribute-configuration",
+        "Same JSON shape as create; use when ABAC already enabled"
+      ],
+      [
+        "CLI \u2014 delete",
+        "aws sso-admin delete-instance-access-control-attribute-configuration",
+        "Disables ABAC entirely and removes all mappings \u2014 no grace period"
+      ],
+      [
+        "Console",
+        "IdC > Settings > Attributes for access control",
+        "Enable button + attribute key/value form; SAML-only attrs not shown here"
+      ]
+    ],
+    "notes": "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance. The CLI create call returns ConflictException if ABAC is already enabled \u2014 use update instead. CloudFormation drift detection is NOT supported for this resource type (status: NOT_CHECKED). Stack deletion calls DeleteInstanceAccessControlAttributeConfiguration and immediately disables ABAC \u2014 apply DeletionPolicy: Retain to prevent this. The InstanceArn is required on all surfaces and is obtained from the IdC console Settings page or via aws sso-admin list-instances."
   },
   "key_findings": [
-    "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance — exactly one ABAC configuration object can exist per instance. The API enforces this constraint: CreateInstanceAccessControlAttributeConfiguration enables ABAC for the first time and returns ConflictException if already enabled; UpdateInstanceAccessControlAttributeConfiguration modifies mappings on an already-enabled instance and returns ResourceNotFoundException if ABAC has never been configured. DescribeInstanceAccessControlAttributeConfiguration is the authoritative pre-check to determine which call to use.",
-    "The AccessControlAttribute structure has exactly two fields: Key (the principal tag name on the STS session, 1–128 chars) and Value.Source (single-item string array, 0–256 chars per item). The entire AccessControlAttributes array is replaced in full on every update — there is no per-attribute add/remove API. Omitting an existing attribute from an update call deletes it silently. The array is capped at 50 entries.",
-    "For SSM RunAs integration, AccessControlAttribute Key must be exactly 'SSMSessionRunAs' — SSM Session Manager reads this tag name to select the OS user. Casing is significant. The resulting principal tag is aws:PrincipalTag/SSMSessionRunAs. The string ssm:RunAsDefaultRunAs appears in SSM user guide content but has not been confirmed as a formally listed IAM condition key in the AWS Service Authorization Reference.",
-    "Source path syntax differs by identity source type. For SCIM-synced external IdP (e.g. Entra ID), Source uses ${path:...} expressions (e.g. ${path:userName}, ${path:enterprise.employeeNumber}). For AWS Managed Microsoft AD-connected instances, Source uses flat dollar-brace syntax (e.g. ${samaccountname}). These syntaxes are not interchangeable. The correct path for a sAMAccountName-derived attribute when using Entra SCIM depends on how Entra maps the AD attribute in its provisioning configuration — not on the AD attribute name itself.",
-    "CloudFormation abstracts the Create/Update/Delete API distinction. The resource provider's create handler calls CreateInstanceAccessControlAttributeConfiguration, the update handler calls UpdateInstanceAccessControlAttributeConfiguration for AccessControlAttributes changes (in-place, no interruption), and the delete handler calls DeleteInstanceAccessControlAttributeConfiguration. Changing InstanceArn triggers resource replacement — the original instance's ABAC config is deleted and a new config is created on the new instance. This is a destructive operation with no automatic recovery.",
+    "InstanceAccessControlAttributeConfiguration is a singleton per IdC instance \u2014 exactly one ABAC configuration object can exist per instance. The API enforces this constraint: CreateInstanceAccessControlAttributeConfiguration enables ABAC for the first time and returns ConflictException if already enabled; UpdateInstanceAccessControlAttributeConfiguration modifies mappings on an already-enabled instance and returns ResourceNotFoundException if ABAC has never been configured. DescribeInstanceAccessControlAttributeConfiguration is the authoritative pre-check to determine which call to use.",
+    "The AccessControlAttribute structure has exactly two fields: Key (the principal tag name on the STS session, 1\u2013128 chars) and Value.Source (single-item string array, 0\u2013256 chars per item). The entire AccessControlAttributes array is replaced in full on every update \u2014 there is no per-attribute add/remove API. Omitting an existing attribute from an update call deletes it silently. The array is capped at 50 entries.",
+    "For SSM RunAs integration, AccessControlAttribute Key must be exactly 'SSMSessionRunAs' \u2014 SSM Session Manager reads this tag name to select the OS user. Casing is significant. The resulting principal tag is aws:PrincipalTag/SSMSessionRunAs. The string ssm:RunAsDefaultRunAs appears in SSM user guide content but has not been confirmed as a formally listed IAM condition key in the AWS Service Authorization Reference.",
+    "Source path syntax differs by identity source type. For SCIM-synced external IdP (e.g. Entra ID), Source uses ${path:...} expressions (e.g. ${path:userName}, ${path:enterprise.employeeNumber}). For AWS Managed Microsoft AD-connected instances, Source uses flat dollar-brace syntax (e.g. ${samaccountname}). These syntaxes are not interchangeable. The correct path for a sAMAccountName-derived attribute when using Entra SCIM depends on how Entra maps the AD attribute in its provisioning configuration \u2014 not on the AD attribute name itself.",
+    "CloudFormation abstracts the Create/Update/Delete API distinction. The resource provider's create handler calls CreateInstanceAccessControlAttributeConfiguration, the update handler calls UpdateInstanceAccessControlAttributeConfiguration for AccessControlAttributes changes (in-place, no interruption), and the delete handler calls DeleteInstanceAccessControlAttributeConfiguration. Changing InstanceArn triggers resource replacement \u2014 the original instance's ABAC config is deleted and a new config is created on the new instance. This is a destructive operation with no automatic recovery.",
     "CloudFormation drift detection is not supported for AWS::SSO::InstanceAccessControlAttributeConfiguration. The resource receives a drift status of NOT_CHECKED. Any changes made out-of-band via the console, CLI, or a separate IaC pipeline are invisible to CloudFormation. The only way to detect divergence is to compare DescribeInstanceAccessControlAttributeConfiguration output against the deployed template manually or via CloudTrail inspection.",
     "Stack deletion is destructive by default. When the owning CloudFormation stack is deleted, the resource provider calls DeleteInstanceAccessControlAttributeConfiguration, which immediately disables ABAC and removes all attribute mappings. Permission set policies that reference aws:PrincipalTag conditions stop matching with no grace period. A DeletionPolicy: Retain (set via applyRemovalPolicy() in CDK on the L1's cfnOptions) prevents the delete API from being called and should be considered mandatory for production environments.",
-    "If ABAC was configured in the IdC console or via CLI before IaC deployment, the CloudFormation stack create will likely fail with ConflictException because the create handler calls CreateInstanceAccessControlAttributeConfiguration against an already-enabled instance. The resource provider does not document an upsert path. Recovery requires either deleting the existing ABAC config before IaC deployment or importing the existing resource into the stack via CloudFormation resource import — the latter is the safer path in production environments.",
-    "The CDK L1 construct (CfnInstanceAccessControlAttributeConfiguration in aws-cdk-lib/aws-sso) exposes accessControlAttributes (current, flat array) and the deprecated instanceAccessControlAttributeConfiguration nested property (backwards compat only). No L2 construct exists. A historical CDK bug (issue 14496, fixed in CDK 1.102.0) caused the Source field to render as a nested JSONObject instead of a JSONArray, producing a CloudFormation validation failure. This bug is resolved in all current CDK versions. The CloudFormation resource schema also has a deprecated top-level InstanceAccessControlAttributeConfiguration property — use the flat AccessControlAttributes property instead.",
+    "If ABAC was configured in the IdC console or via CLI before IaC deployment, the CloudFormation stack create will likely fail with ConflictException because the create handler calls CreateInstanceAccessControlAttributeConfiguration against an already-enabled instance. The resource provider does not document an upsert path. Recovery requires either deleting the existing ABAC config before IaC deployment or importing the existing resource into the stack via CloudFormation resource import \u2014 the latter is the safer path in production environments.",
+    "The CDK L1 construct (CfnInstanceAccessControlAttributeConfiguration in aws-cdk-lib/aws-sso) exposes accessControlAttributes (current, flat array) and the deprecated instanceAccessControlAttributeConfiguration nested property (backwards compat only). No L2 construct exists. A historical CDK bug (issue 14496, fixed in CDK 1.102.0) caused the Source field to render as a nested JSONObject instead of a JSONArray, producing a CloudFormation validation failure. This bug is resolved in all current CDK versions. The CloudFormation resource schema also has a deprecated top-level InstanceAccessControlAttributeConfiguration property \u2014 use the flat AccessControlAttributes property instead.",
     "The InstanceArn required on all surfaces has the form arn:aws:sso:::instance/(sso)?ins-[a-zA-Z0-9-.]{16}. It is available in the IdC console under Settings or via aws sso-admin list-instances. It is not a Ref-able resource created in the same stack and must be passed as a parameter or resolved via CDK context. The InstanceArn must exist before the resource can be created; SCIM provisioning does not need to be active as a hard prerequisite, though attribute mappings will not evaluate against real user attributes until an identity source is operational."
   ],
   "concepts": [
@@ -36,7 +64,7 @@
     },
     {
       "name": "AccessControlAttribute",
-      "description": "A single attribute mapping entry within InstanceAccessControlAttributeConfiguration. Contains a Key (the principal tag name that appears on the STS session) and a Value.Source (a single-item array with an identity store path expression or literal source token). The full array is replaced on every update — no partial-update API exists."
+      "description": "A single attribute mapping entry within InstanceAccessControlAttributeConfiguration. Contains a Key (the principal tag name that appears on the STS session) and a Value.Source (a single-item array with an identity store path expression or literal source token). The full array is replaced on every update \u2014 no partial-update API exists."
     },
     {
       "name": "path expression ${path:...}",
@@ -60,7 +88,7 @@
     },
     {
       "name": "DeleteInstanceAccessControlAttributeConfiguration",
-      "description": "The sso-admin API call that fully disables ABAC and removes all attribute mappings for an IdC instance. Called by the CloudFormation delete handler when the resource is removed from a stack or the stack is deleted. Immediately stops attribute propagation — ABAC-dependent policies become non-matching with no grace period."
+      "description": "The sso-admin API call that fully disables ABAC and removes all attribute mappings for an IdC instance. Called by the CloudFormation delete handler when the resource is removed from a stack or the stack is deleted. Immediately stops attribute propagation \u2014 ABAC-dependent policies become non-matching with no grace period."
     },
     {
       "name": "DescribeInstanceAccessControlAttributeConfiguration",
@@ -84,112 +112,112 @@
     }
   ],
   "tensions": [
-    "The Source path for a sAMAccountName-derived attribute via Entra SCIM is not simply ${path:samaccountname} — the correct path depends on how Entra ID maps the AD attribute in its SCIM provisioning configuration before syncing to IdC. This dependency is controlled by Entra and must be confirmed before the Source value can be written.",
-    "UpdateInstanceAccessControlAttributeConfiguration replaces the entire AccessControlAttributes list, creating a coordination hazard in shared IdC instances. Concurrent deployments from multiple stacks or teams can silently overwrite each other's attributes — there is no merge or partial-update API surface.",
+    "The Source path for a sAMAccountName-derived attribute via Entra SCIM is not simply ${path:samaccountname} \u2014 the correct path depends on how Entra ID maps the AD attribute in its SCIM provisioning configuration before syncing to IdC. This dependency is controlled by Entra and must be confirmed before the Source value can be written.",
+    "UpdateInstanceAccessControlAttributeConfiguration replaces the entire AccessControlAttributes list, creating a coordination hazard in shared IdC instances. Concurrent deployments from multiple stacks or teams can silently overwrite each other's attributes \u2014 there is no merge or partial-update API surface.",
     "CloudFormation hides the Create/Update/Delete API distinction, making it impossible to predict which underlying API call will be made without understanding the resource provider's state-detection logic. This abstraction is normally beneficial but becomes a liability when pre-deploy state is unknown (e.g., ABAC was console-configured before IaC adoption).",
     "Drift detection absence creates a permanent gap between IaC-declared state and actual state. Re-applies after out-of-band changes may silently overwrite the out-of-band config or fail depending on whether the change triggers an in-place update or replacement.",
-    "Stack deletion deletes ABAC configuration immediately with no warning or grace period. The default CloudFormation behavior is destructive — this is operationally dangerous for production environments where the resource should outlive any single deployment stack.",
-    "The singleton constraint means the resource cannot be safely owned by more than one stack. Organizations using multiple deployment pipelines (e.g., LZA customizations + a separate ABAC stack) must coordinate ownership carefully — there is no native CloudFormation mechanism to prevent two stacks from declaring this resource against the same instance.",
-    "Attributes delivered purely via SAML assertions — not stored in the IdC identity store and not configured in AccessControlAttributeConfiguration — are functional as session tags but invisible in the Attributes for access control console view, creating a discoverability gap where a working configuration appears absent."
+    "Stack deletion deletes ABAC configuration immediately with no warning or grace period. The default CloudFormation behavior is destructive \u2014 this is operationally dangerous for production environments where the resource should outlive any single deployment stack.",
+    "The singleton constraint means the resource cannot be safely owned by more than one stack. Organizations using multiple deployment pipelines (e.g., LZA customizations + a separate ABAC stack) must coordinate ownership carefully \u2014 there is no native CloudFormation mechanism to prevent two stacks from declaring this resource against the same instance.",
+    "Attributes delivered purely via SAML assertions \u2014 not stored in the IdC identity store and not configured in AccessControlAttributeConfiguration \u2014 are functional as session tags but invisible in the Attributes for access control console view, creating a discoverability gap where a working configuration appears absent."
   ],
   "open_questions": [
-    "What is the exact Entra ID SCIM provisioning mapping for sAMAccountName — which SCIM schema field does Entra write sAMAccountName into when provisioning users to IdC? This determines the correct ${path:...} Source value.",
+    "What is the exact Entra ID SCIM provisioning mapping for sAMAccountName \u2014 which SCIM schema field does Entra write sAMAccountName into when provisioning users to IdC? This determines the correct ${path:...} Source value.",
     "Does LZA's IdC configuration surface expose any mechanism to manage InstanceAccessControlAttributeConfiguration, or must this resource always be deployed outside of the LZA customizations pipeline?",
-    "What is the behavior when a user's identity store attribute referenced in a Source path is null or empty — does IdC emit an empty tag, omit the tag entirely, or block session issuance?",
-    "Does DescribeInstanceAccessControlAttributeConfiguration return ResourceNotFoundException or a specific status value when ABAC has never been configured on an instance? The documentation does not explicitly state this — the answer determines whether the CloudFormation resource provider can safely detect pre-existing state on first deploy.",
+    "What is the behavior when a user's identity store attribute referenced in a Source path is null or empty \u2014 does IdC emit an empty tag, omit the tag entirely, or block session issuance?",
+    "Does DescribeInstanceAccessControlAttributeConfiguration return ResourceNotFoundException or a specific status value when ABAC has never been configured on an instance? The documentation does not explicitly state this \u2014 the answer determines whether the CloudFormation resource provider can safely detect pre-existing state on first deploy.",
     "Does the CloudFormation create handler for this resource type read existing state before calling CreateInstanceAccessControlAttributeConfiguration, and if it detects an existing config, does it fall through to UpdateInstanceAccessControlAttributeConfiguration? The resource provider source was archived in August 2025 and the handler logic is not publicly documented.",
-    "What is the exact behavior of active permission set assignments referencing aws:PrincipalTag/* conditions when DeleteInstanceAccessControlAttributeConfiguration is called — are existing active sessions affected or only new federations?",
+    "What is the exact behavior of active permission set assignments referencing aws:PrincipalTag/* conditions when DeleteInstanceAccessControlAttributeConfiguration is called \u2014 are existing active sessions affected or only new federations?",
     "Is there a documented CloudFormation resource import path for AWS::SSO::InstanceAccessControlAttributeConfiguration? This is the safe recovery path for brownfield environments where ABAC was configured before IaC adoption.",
     "Is ssm:RunAsDefaultRunAs a formally listed IAM condition key in the AWS Service Authorization Reference condition key table for Systems Manager? The string appears in SSM user guide content but was not found in the SAR condition key list during sub-investigation validation.",
     "Are there documented quota increase paths for the 50-attribute limit, or is 50 a hard service ceiling?"
   ],
   "sources": [
     {
-      "title": "AWS CloudFormation — AWS::SSO::InstanceAccessControlAttributeConfiguration resource reference (Template Reference)",
+      "title": "AWS CloudFormation \u2014 AWS::SSO::InstanceAccessControlAttributeConfiguration resource reference (Template Reference)",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-sso-instanceaccesscontrolattributeconfiguration.html"
     },
     {
-      "title": "AWS CloudFormation — AWS::SSO::InstanceAccessControlAttributeConfiguration resource reference (User Guide)",
+      "title": "AWS CloudFormation \u2014 AWS::SSO::InstanceAccessControlAttributeConfiguration resource reference (User Guide)",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-sso-instanceaccesscontrolattributeconfiguration.html"
     },
     {
-      "title": "AWS CloudFormation — AccessControlAttribute property type",
+      "title": "AWS CloudFormation \u2014 AccessControlAttribute property type",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-sso-instanceaccesscontrolattributeconfiguration-accesscontrolattribute.html"
     },
     {
-      "title": "AWS CloudFormation — AccessControlAttributeValue property type",
+      "title": "AWS CloudFormation \u2014 AccessControlAttributeValue property type",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-sso-instanceaccesscontrolattributeconfiguration-accesscontrolattributevalue.html"
     },
     {
-      "title": "IAM Identity Center API Reference — CreateInstanceAccessControlAttributeConfiguration",
+      "title": "IAM Identity Center API Reference \u2014 CreateInstanceAccessControlAttributeConfiguration",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center API Reference — UpdateInstanceAccessControlAttributeConfiguration",
+      "title": "IAM Identity Center API Reference \u2014 UpdateInstanceAccessControlAttributeConfiguration",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_UpdateInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center API Reference — DeleteInstanceAccessControlAttributeConfiguration",
+      "title": "IAM Identity Center API Reference \u2014 DeleteInstanceAccessControlAttributeConfiguration",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_DeleteInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center API Reference — DescribeInstanceAccessControlAttributeConfiguration",
+      "title": "IAM Identity Center API Reference \u2014 DescribeInstanceAccessControlAttributeConfiguration",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_DescribeInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center API Reference — InstanceAccessControlAttributeConfiguration data type",
+      "title": "IAM Identity Center API Reference \u2014 InstanceAccessControlAttributeConfiguration data type",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_InstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "AWS CLI reference — create-instance-access-control-attribute-configuration",
+      "title": "AWS CLI reference \u2014 create-instance-access-control-attribute-configuration",
       "url": "https://docs.aws.amazon.com/cli/latest/reference/sso-admin/create-instance-access-control-attribute-configuration.html"
     },
     {
-      "title": "AWS CLI reference — update-instance-access-control-attribute-configuration",
+      "title": "AWS CLI reference \u2014 update-instance-access-control-attribute-configuration",
       "url": "https://docs.aws.amazon.com/cli/latest/reference/sso-admin/update-instance-access-control-attribute-configuration.html"
     },
     {
-      "title": "AWS CDK v2 — CfnInstanceAccessControlAttributeConfiguration construct",
+      "title": "AWS CDK v2 \u2014 CfnInstanceAccessControlAttributeConfiguration construct",
       "url": "https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_sso.CfnInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "IAM Identity Center User Guide — Attributes for access control",
+      "title": "IAM Identity Center User Guide \u2014 Attributes for access control",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/attributesforaccesscontrol.html"
     },
     {
-      "title": "IAM Identity Center User Guide — Attribute mappings concept",
+      "title": "IAM Identity Center User Guide \u2014 Attribute mappings concept",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/attributemappingsconcept.html"
     },
     {
-      "title": "IAM Identity Center User Guide — Enable and configure attributes for access control",
+      "title": "IAM Identity Center User Guide \u2014 Enable and configure attributes for access control",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/configure-abac.html"
     },
     {
-      "title": "IAM Identity Center User Guide — Attribute-based access control",
+      "title": "IAM Identity Center User Guide \u2014 Attribute-based access control",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac.html"
     },
     {
-      "title": "IAM Identity Center User Guide — ABAC Configuration Checklist",
+      "title": "IAM Identity Center User Guide \u2014 ABAC Configuration Checklist",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac-checklist.html"
     },
     {
-      "title": "AWS Security Blog — Configure AWS IAM Identity Center ABAC for EC2 and Systems Manager Session Manager",
+      "title": "AWS Security Blog \u2014 Configure AWS IAM Identity Center ABAC for EC2 and Systems Manager Session Manager",
       "url": "https://aws.amazon.com/blogs/security/configure-aws-sso-abac-for-ec2-instances-and-systems-manager-session-manager/"
     },
     {
-      "title": "AWS MT Blog — Configure Session Manager access for federated users using SAML session tags",
+      "title": "AWS MT Blog \u2014 Configure Session Manager access for federated users using SAML session tags",
       "url": "https://aws.amazon.com/blogs/mt/configure-session-manager-access-for-federated-users-using-saml-session-tags/"
     },
     {
-      "title": "CloudFormation User Guide — Detect unmanaged configuration changes with drift detection",
+      "title": "CloudFormation User Guide \u2014 Detect unmanaged configuration changes with drift detection",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html"
     },
     {
-      "title": "CloudFormation User Guide — Resource type support (import and drift detection)",
+      "title": "CloudFormation User Guide \u2014 Resource type support (import and drift detection)",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resource-import-supported-resources.html"
     },
     {
-      "title": "CDK Issue 14496 — Probably wrong CfnInstanceAccessControlAttributeConfiguration Typing",
+      "title": "CDK Issue 14496 \u2014 Probably wrong CfnInstanceAccessControlAttributeConfiguration Typing",
       "url": "https://github.com/aws/aws-cdk/issues/14496"
     },
     {
@@ -199,24 +227,42 @@
   ],
   "audience_briefs": {
     "engineering_leadership": {
-      "headline": "IAM Identity Center ABAC configuration is a singleton IaC resource with no drift detection, a destructive default deletion behavior, and a create/update API split that can block deployment against pre-existing console-configured instances",
-      "summary": "InstanceAccessControlAttributeConfiguration is the single control plane object that wires a SCIM-synced user attribute (e.g. sAMAccountName from Entra) to the OS login used in SSM sessions — via Key = 'SSMSessionRunAs'. It is a singleton per IdC instance, fully manageable via CloudFormation or CDK L1. However, it has three operational hazards: (1) CloudFormation drift detection is unsupported — out-of-band changes are invisible to IaC tooling; (2) stack deletion calls DeleteInstanceAccessControlAttributeConfiguration immediately, disabling ABAC and breaking all aws:PrincipalTag-dependent policies with no grace period; (3) deploying IaC against an instance where ABAC was previously console-configured will fail with ConflictException until the existing resource is imported into the stack.",
-      "risk": "High — the resource is production-critical once deployed. Default CloudFormation behavior (no DeletionPolicy: Retain, no stack termination protection) makes accidental ABAC deletion a realistic operational risk. Drift detection absence means out-of-band changes accumulate silently.",
-      "next_steps": {
-        "leadership_decision": "Authorize the IdC ABAC configuration as a standalone IaC change outside the LZA customizations pipeline. Approve a policy requiring DeletionPolicy: Retain and stack termination protection on all stacks containing this resource. Confirm whether multiple teams share the same IdC instance — if yes, a coordination gate is needed because each update replaces the full attribute list.",
-        "work_to_assign": "Architects/identity team: confirm the Entra SCIM attribute path for sAMAccountName before writing the Source value. Platform team: assess whether IdC ABAC is already enabled in the target instance and determine if a CloudFormation import step is required before deployment. Infra team: audit all stacks containing this resource and verify DeletionPolicy is set and stack termination protection is enabled.",
-        "leadership_input_required": "Approve the guardrail policy requiring termination protection on stacks containing identity infrastructure. Confirm single-stack ownership of this resource across all deployment pipelines."
-      }
+      "headline": "IAM Identity Center ABAC configuration is a singleton IaC resource with no drift detection, a destructive default deletion behavior, and a create/update API split that blocks deployment against pre-existing console-configured instances",
+      "so_what": "Once deployed, this resource is production-critical \u2014 it is the only control plane object wiring SCIM-synced user attributes to OS login in SSM sessions. Default CloudFormation behavior makes accidental ABAC deletion a realistic operational risk: stack deletion calls the Delete API immediately with no grace period, and drift detection is unsupported, meaning out-of-band changes accumulate silently.",
+      "bullets": [
+        "Singleton per IdC instance \u2014 one resource object, one owning stack. Multiple pipelines writing to the same instance will conflict.",
+        "Stack deletion immediately disables ABAC for all users with no recovery grace period. DeletionPolicy: Retain and stack termination protection are off by default and must be explicitly set.",
+        "CloudFormation drift detection returns NOT_CHECKED \u2014 console or CLI changes after deployment are invisible to IaC tooling.",
+        "Deploying IaC against an instance where ABAC was manually configured will fail with ConflictException until the existing resource is imported into the stack.",
+        "Every attribute list update is a full replacement \u2014 any team that omits an existing attribute in an update call silently deletes it."
+      ],
+      "action_required": "Authorize IdC ABAC configuration as a standalone IaC change outside the LZA customizations pipeline. Approve a policy requiring DeletionPolicy: Retain and stack termination protection on all stacks containing this resource. Confirm whether multiple teams share the same IdC instance \u2014 if yes, a coordination gate is required."
     },
     "product_owner": {
-      "headline": "The AWS setting that lets users' directory attributes drive which OS account is used in SSM sessions is a single shared control per Identity Center instance — if the stack managing it is deleted, per-user session routing stops immediately for everyone",
-      "summary": "When engineers start an SSM session on a managed server, the session needs to use their personal OS account. The ABAC attribute configuration tells AWS to look up the user's directory username at sign-in time and pass it automatically to the server session. This is a required building block for the SSMSessionRunAs fix. The configuration is a shared, singleton resource — it cannot be owned by multiple deployment pipelines simultaneously, and deleting the owning stack disables the feature with no recovery grace period. AWS has no built-in alarm or detection if this setting is changed outside the deployment pipeline.",
-      "risk": "High — accidental stack deletion immediately breaks per-user session routing for all users relying on ABAC. No automatic recovery exists. The fix requires explicit guardrails (DeletionPolicy: Retain, stack termination protection) that are off by default.",
+      "headline": "The setting that routes each engineer to their own server OS account is a single shared control \u2014 deleting the stack that manages it breaks server access routing for everyone instantly, with no warning",
+      "so_what": "When engineers start an SSM session on a managed server, the session needs to use their personal OS account. This AWS setting looks up the user's directory username at sign-in and passes it automatically to the server. It is a required building block for the SSMSessionRunAs fix. If the owning infrastructure stack is accidentally deleted, per-user session routing stops immediately for all engineers \u2014 there is no automatic recovery and no built-in alarm.",
+      "bullets": [
+        "This is a shared, singleton setting \u2014 it cannot be owned by multiple deployment pipelines at the same time.",
+        "Deleting the infrastructure stack that manages this setting disables per-user session routing with no grace period or rollback warning.",
+        "AWS does not automatically detect or alert when this setting is changed outside the deployment pipeline.",
+        "One open technical dependency remains before the configuration can be written: the Identity (Entra) team must confirm which directory attribute field carries the per-user OS username in the SCIM provisioning setup.",
+        "Once the dependency is resolved, this is a pure infrastructure change \u2014 no product feature work is required."
+      ],
+      "risk_level": "High",
       "next_steps": {
-        "po_em_decision": "PO/EM should confirm with the infra team that the stack managing this setting has deletion protection enabled and will not be torn down as part of normal pipeline operations.",
-        "work_to_assign": "Infra/architecture team to add DeletionPolicy: Retain to the resource and enable stack termination protection on the owning stack. Identity team to confirm the Entra SCIM attribute path for sAMAccountName — this is the only remaining technical dependency before the IaC change can be written.",
-        "leadership_input_required": "Engineering leadership to approve the guardrail policy requiring termination protection on stacks containing identity infrastructure."
-      }
+        "po_action": "PO/EM to confirm with the infra team that deletion protection is enabled on the stack managing this setting before it goes to production.",
+        "work_to_assign": [
+          "Identity team: confirm the Entra SCIM attribute path for the per-user OS username (sAMAccountName) \u2014 this is the only remaining dependency before the IaC change can be written.",
+          "Infra/architecture team: add DeletionPolicy: Retain to the resource and enable stack termination protection on the owning stack.",
+          "Platform team: assess whether IdC ABAC is already enabled in the target instance and determine if a CloudFormation import step is required before first deployment."
+        ],
+        "leadership_input": "Engineering leadership to approve the guardrail policy requiring termination protection on stacks containing identity infrastructure."
+      },
+      "questions_to_ask_engineering": [
+        "Has the Entra SCIM attribute path for the per-user OS username been confirmed \u2014 and if so, what is it?",
+        "Is ABAC already enabled in the Identity Center instance, and do we need an import step before deploying via CloudFormation?",
+        "Which team owns the stack that will manage this resource, and is deletion protection already in place?"
+      ]
     }
   }
 }
