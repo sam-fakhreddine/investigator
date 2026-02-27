@@ -22,6 +22,88 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from typing import Optional, Union
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import ValidationError
+
+
+
+class QuickReference(BaseModel):
+    title: str = "Quick Reference"
+    columns: list[str]
+    rows: list[list[str]]
+    notes: Optional[str] = None
+
+
+class Source(BaseModel):
+    title: str
+    url: str
+
+
+class Concept(BaseModel):
+    name: str
+    description: str
+
+
+class EngineeringLeadershipBrief(BaseModel):
+    headline: str
+    so_what: str
+    bullets: list[str] = Field(min_length=1)
+    action_required: Optional[str] = None
+
+    model_config = {"extra": "forbid"}
+
+
+class PONextSteps(BaseModel):
+    po_action: str
+    work_to_assign: list[str] = Field(min_length=1)
+    leadership_input: Optional[str] = None
+
+    model_config = {"extra": "forbid"}
+
+
+class ProductOwnerBrief(BaseModel):
+    headline: str
+    so_what: str
+    bullets: list[str] = Field(min_length=1)
+    risk_level: str
+    next_steps: PONextSteps
+    questions_to_ask_engineering: list[str] = Field(default_factory=list)
+
+    model_config = {"extra": "forbid"}
+
+    @field_validator("risk_level")
+    @classmethod
+    def valid_risk(cls, v: str) -> str:
+        allowed = {"Low", "Medium", "High", "Critical"}
+        if v not in allowed:
+            raise ValueError(f"risk_level must be one of {sorted(allowed)}, got {v!r}")
+        return v
+
+
+class AudienceBriefs(BaseModel):
+    engineering_leadership: Optional[EngineeringLeadershipBrief] = None
+    product_owner: Optional[ProductOwnerBrief] = None
+
+    model_config = {"extra": "forbid"}
+
+
+class Investigation(BaseModel):
+    topic: str
+    date: str
+    status: str
+    question: str
+    context: str
+    quick_reference: Optional[QuickReference] = None
+    key_findings: list[Union[str, dict]] = Field(default_factory=list)
+    concepts: list[Concept] = Field(default_factory=list)
+    tensions: list[str] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+    sources: list[Source] = Field(default_factory=list)
+    audience_briefs: Optional[AudienceBriefs] = None
+
+    model_config = {"extra": "allow"}
 
 
 REQUIRED_FIELDS = ('topic', 'date', 'status', 'question', 'context')
@@ -385,6 +467,15 @@ def main():
     missing = [f for f in REQUIRED_FIELDS if not data.get(f)]
     if missing:
         print(f"ERROR: investigation.json is missing required fields: {', '.join(missing)}")
+        sys.exit(2)
+
+    try:
+        Investigation.model_validate(data)
+    except ValidationError as exc:
+        print("ERROR: investigation.json failed schema validation:")
+        for err in exc.errors():
+            loc = " -> ".join(str(p) for p in err["loc"])
+            print(f"  [{loc}] {err['msg']}")
         sys.exit(2)
 
     outputs = [("investigation.md", render(data))]
