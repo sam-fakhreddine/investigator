@@ -1,0 +1,139 @@
+{
+  "topic": "Lambda-Based Session Broker for SSM Per-Role Linux Identity",
+  "date": "2026-02-28",
+  "status": "Complete",
+  "question": "If native AWS mechanisms cannot achieve per-role Linux identity mapping in SSM Session Manager, what does a Lambda-based session broker architecture involve -- what AWS services and APIs participate, what is the session flow, and what are the known constraints and trade-offs?",
+  "context": "The current PoC uses Entra ID extensionAttribute1 mapped through SCIM to IdC ABAC SSMSessionRunAs tags. This achieves per-user Linux identity mapping via SSM-SessionManagerRunShell with runAsEnabled=true. However, the requirement is per-role mapping: choosing the SSMRunAs-Admin permission set should land the user as 'admin', and SSMRunAs-Developer should land as 'developer'. The SSMSessionRunAs tag is evaluated per-IAM-principal, not per-assumed-role, so native mechanisms cannot differentiate by permission set. A Lambda-based session broker would intercept session requests, inspect the caller's assumed role ARN (which encodes the permission set name), and call the SSM StartSession API with the appropriate RunAs user.",
+  "quick_reference": {
+    "title": "Lambda Session Broker: Key APIs and Components",
+    "columns": ["Component", "AWS Service/API", "Role in Broker"],
+    "rows": [
+      ["Session Initiation", "SSM StartSession API", "Lambda calls this with DocumentName specifying the RunAs user"],
+      ["Caller Identity", "STS GetCallerIdentity", "Lambda extracts the caller's assumed role ARN to determine permission set"],
+      ["Role ARN Parsing", "IAM Identity Center naming convention", "AWSReservedSSO_<PermSetName>_<suffix> encodes the permission set name"],
+      ["Client Entry Point", "API Gateway (REST or HTTP)", "User's CLI/script calls the broker endpoint instead of SSM directly"],
+      ["Session Handoff", "session-manager-plugin", "Plugin receives StartSession response JSON (SessionId, StreamUrl, TokenValue) to establish WebSocket"],
+      ["Session Document", "SSM Document (Standard_Stream)", "Per-role documents with runAsEnabled=true and runAsDefaultUser set to the target OS user"],
+      ["Audit Trail", "CloudTrail", "StartSession event shows Lambda execution role, not original user -- requires compensating logging"]
+    ],
+    "notes": "The broker sits between the user's CLI and the SSM service. It does not proxy the WebSocket data channel -- it only brokers session creation."
+  },
+  "key_findings": [
+    "The SSM StartSession API accepts a DocumentName parameter that specifies a session document. Each document can set runAsEnabled=true and runAsDefaultUser to a specific OS user, enabling programmatic control of which Linux user a session runs as.",
+    "StartSession returns three values: SessionId, StreamUrl (a WebSocket URL to ssmmessages.<region>.amazonaws.com), and TokenValue (an encrypted short-lived authentication token). These are sufficient to establish a session via session-manager-plugin without re-authenticating against SSM.",
+    "The session-manager-plugin accepts StartSession response JSON as its first argument, followed by region, the literal string 'StartSession', a CLI profile name (can be empty), the original request parameters as JSON, and the SSM endpoint URL. This means a Lambda broker can return the StartSession response and the client can hand it directly to the plugin.",
+    "IAM Identity Center creates roles named AWSReservedSSO_<PermissionSetName>_<uniqueSuffix> when assigning permission sets. A Lambda receiving a request from such a role can parse the permission set name from the caller's ARN using STS GetCallerIdentity (which requires no IAM permissions to call).",
+    "When Lambda calls StartSession on behalf of a user, CloudTrail attributes the StartSession event to the Lambda execution role, not the original caller. The original user's identity is lost from the SSM audit perspective unless compensating controls are implemented (e.g., Lambda logs the original caller ARN alongside the SessionId).",
+    "The SSM WebSocket data channel (the actual terminal I/O) flows directly between the session-manager-plugin on the user's machine and the SSM Agent on the target instance. The Lambda broker is not in the data path after session creation -- it only brokers the control plane call.",
+    "The session-manager-plugin binary protocol uses a custom binary framing format over WebSocket with fields including HeaderLength (4 bytes), MessageType (32 bytes), SchemaVersion (4 bytes), CreatedDate (8 bytes), SequenceNumber (8 bytes), and Flags (8 bytes). Proxying this protocol through API Gateway WebSocket would require implementing the full SSM agent message protocol.",
+    "An alternative to per-role session documents is a single session document where the Lambda dynamically sets runAsDefaultUser before calling StartSession. However, SSM-SessionManagerRunShell is a shared preferences document -- modifying it per-request would create race conditions. Separate named documents per role avoid this.",
+    "IAM policy conditions can restrict which session documents a role is allowed to use via the ssm:document condition key and ssm:SessionDocumentAccessCheck. This provides defense-in-depth: even if the broker is bypassed, IAM prevents a role from using a document that maps to a different OS user.",
+    "The session-manager-plugin must be installed on the client machine. There is no AWS-provided mechanism to establish an SSM session purely via API without the plugin (or a reimplementation of the binary WebSocket protocol, such as the open-source aws-ssm-session JavaScript library)."
+  ],
+  "concepts": [
+    {
+      "name": "StartSession API",
+      "description": "SSM API operation (POST to AmazonSSM.StartSession) that initiates a Session Manager session. Accepts Target (instance ID), optional DocumentName, Parameters, and Reason. Returns SessionId, StreamUrl (WebSocket endpoint), and TokenValue (encrypted auth token)."
+    },
+    {
+      "name": "Session Document (Standard_Stream)",
+      "description": "An SSM document of type Session that defines session preferences. Key inputs include runAsEnabled (boolean), runAsDefaultUser (OS username), idleSessionTimeout, and maxSessionDuration. The document name is passed via the DocumentName parameter of StartSession."
+    },
+    {
+      "name": "session-manager-plugin",
+      "description": "AWS-provided binary that establishes the WebSocket connection to the SSM data channel. Invoked with six positional arguments: StartSession response JSON, region, 'StartSession', profile name, request parameters JSON, and SSM endpoint URL."
+    },
+    {
+      "name": "AWSReservedSSO_ Role Naming",
+      "description": "IAM Identity Center creates roles named AWSReservedSSO_<PermissionSetName>_<uniqueSuffix> in each member account when a permission set is assigned. The permission set name is extractable from the role ARN via string parsing."
+    },
+    {
+      "name": "SSM Binary WebSocket Protocol",
+      "description": "After the initial JSON authentication handshake (sending TokenValue), SSM sessions switch to a custom binary framing protocol with fixed-width header fields. This protocol is implemented by the session-manager-plugin and the SSM Agent."
+    },
+    {
+      "name": "CloudTrail Attribution Gap",
+      "description": "When a Lambda function calls StartSession, CloudTrail records the Lambda execution role as the caller. The original user identity is not propagated to the SSM session audit trail, creating an attribution gap that must be addressed with compensating controls."
+    }
+  ],
+  "tensions": [
+    "Audit fidelity vs. architectural simplicity: The broker decouples the session initiator (Lambda role) from the actual user, breaking CloudTrail attribution. Compensating logging in the Lambda adds complexity but is essential for security compliance.",
+    "Client-side complexity vs. transparent operation: Users must invoke a wrapper script or CLI tool that calls the broker API and feeds the response to session-manager-plugin, rather than using the standard 'aws ssm start-session' command. This changes the user workflow.",
+    "Single shared document vs. per-role documents: A single SSM document modified at runtime risks race conditions under concurrent access. Per-role documents (e.g., SSMRunAs-Admin-Session, SSMRunAs-Developer-Session) are safer but require document lifecycle management across all member accounts.",
+    "Defense-in-depth vs. operational overhead: IAM policies restricting document access per role provide security guarantees even if the broker is bypassed, but require coordinated IAM policy management across permission sets and session documents.",
+    "Broker availability vs. session access: The Lambda broker becomes a single point of failure for session initiation. If the broker is unavailable, no sessions can be started with per-role identity mapping. Native SSM sessions remain available but without the per-role mapping."
+  ],
+  "open_questions": [
+    "Can SSM StartSession accept runAsDefaultUser as a runtime parameter override without requiring a separate document per role? The API accepts a Parameters map, but it is unclear whether runAsDefaultUser is a supported parameter key.",
+    "What is the exact IAM permission set required on the Lambda execution role to call ssm:StartSession on target instances in member accounts? Cross-account session initiation may require additional trust relationships.",
+    "How does the TokenValue expiry window interact with the broker's response latency? If the Lambda takes several seconds to respond, does the token remain valid long enough for the client to connect?",
+    "Can the broker architecture work with the AWS Console's built-in Session Manager connect button, or is it limited to CLI/SDK-initiated sessions?",
+    "What is the maximum number of concurrent SSM sessions per account/region, and does the broker pattern affect session quotas differently than direct StartSession calls?"
+  ],
+  "sources": [
+    {
+      "title": "StartSession API Reference - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_StartSession.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Session document schema - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-schema.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Turn on Run As support for Linux and macOS managed nodes - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-preferences-run-as.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "start-session CLI Reference - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/start-session.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Referencing permission sets in resource policies - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/referencingpermissionsets.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Start a session with a document by specifying session documents in IAM policies - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-specify-session-document.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "aws-ssm-session - JavaScript library for SSM sessions (Browser and NodeJS)",
+      "url": "https://github.com/bertrandmartel/aws-ssm-session",
+      "tier": "community"
+    },
+    {
+      "title": "How to use AWS SSM Session Manager Plugin - DEV Community",
+      "url": "https://dev.to/leimd/how-to-use-aws-ssm-session-manager-plugin-33hh",
+      "tier": "community"
+    },
+    {
+      "title": "GetCallerIdentity API Reference - AWS STS",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Logging AWS Systems Manager API calls with AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "A Lambda session broker can achieve per-role Linux identity mapping in SSM by intercepting session creation and selecting the RunAs user based on the caller's permission set, but it introduces audit attribution gaps and client-side workflow changes.",
+      "so_what": "This architecture fills a gap that native AWS mechanisms cannot address: mapping IAM Identity Center permission sets to different Linux OS users on the same target instance. The trade-off is added operational complexity (Lambda broker, per-role session documents, compensating audit logs) and a changed user workflow requiring a wrapper script instead of direct SSM CLI usage.",
+      "bullets": [
+        "The broker only handles session creation (control plane); terminal I/O flows directly between the user's machine and the SSM agent, so there is no data-plane latency or throughput impact.",
+        "CloudTrail will attribute SSM sessions to the Lambda execution role, not the original user. Compensating logs in the Lambda are required to maintain audit traceability for compliance.",
+        "Per-role SSM session documents (e.g., SSMRunAs-Admin-Session, SSMRunAs-Developer-Session) must be deployed to every member account, adding to the StackSet footprint.",
+        "IAM policy conditions on session document access provide defense-in-depth: even bypassing the broker, a role cannot use a document mapped to a different OS user.",
+        "The Lambda broker becomes a new availability dependency for session initiation -- if it is down, per-role mapping is unavailable, though fallback to native SSM remains possible."
+      ],
+      "action_required": "Decide whether the audit attribution gap and client workflow change are acceptable trade-offs for per-role Linux identity mapping, and whether to proceed with a proof-of-concept implementation."
+    }
+  }
+}

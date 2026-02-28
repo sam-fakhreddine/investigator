@@ -1,0 +1,231 @@
+{
+  "topic": "Per-Role Linux Identity Mapping via SSM Session Manager and IAM Identity Center",
+  "date": "2026-02-28",
+  "status": "Complete",
+  "question": "Can AWS SSM Session Manager map different Linux usernames based on which IAM Identity Center permission set (role) the user selects, and if not natively, what does a custom broker architecture involve?",
+  "context": "The current PoC uses Entra ID extensionAttribute1 mapped through SCIM to IdC ABAC SSMSessionRunAs tags, achieving per-user Linux identity mapping. However, per-user mapping means a user always lands as the same OS user regardless of which permission set they select -- if Alice has SSMSessionRunAs=alice, she is 'alice' whether she picks Admin or Developer. Per-role mapping is needed so that the Linux session identity reflects the access level chosen, enabling least-privilege OS-level separation and cleaner audit trails tied to role context rather than just personal identity.",
+  "quick_reference": {
+    "title": "Per-Role RunAs Mapping: Native vs Custom Approaches",
+    "columns": ["Approach", "Feasibility", "Complexity", "Key Trade-off"],
+    "rows": [
+      ["IdC ABAC SSMSessionRunAs tag", "Not feasible", "None (current state)", "Tag is per-user, not per-permission-set; same value sent for all role assumptions"],
+      ["Direct tagging of AWSReservedSSO_ roles", "Blocked", "None (cannot implement)", "AWS protects these roles; TagRole is denied"],
+      ["Per-document RunAs without ABAC tag", "Fragile workaround", "Medium", "Requires removing ABAC tag entirely; users must specify --document-name on every session"],
+      ["Permission set IAM policy (defense-in-depth)", "Supplementary only", "Low", "Can deny mismatched sessions but cannot set or override the RunAs value"],
+      ["Lambda session broker", "Feasible", "High", "Solves per-role mapping but introduces audit attribution gap, client workflow change, and new availability dependency"]
+    ],
+    "notes": "No native AWS mechanism allows SSMSessionRunAs to vary by permission set. The Lambda broker is the only architecture that achieves true per-role mapping, at the cost of additional infrastructure and operational complexity."
+  },
+  "key_findings": [
+    "SSM Session Manager resolves the RunAs user through a fixed precedence chain: (1) SSMSessionRunAs tag on the calling IAM principal, (2) runAsDefaultUser in the specified session document, (3) runAsDefaultUser in the account default SSM-SessionManagerRunShell document. No native mechanism allows injecting a per-permission-set value into this chain.",
+    "IAM Identity Center ABAC attributes are fundamentally per-user, not per-permission-set. When a user assumes any permission set, IdC sends the same ABAC attribute values as STS session tags. The permission set selection does not influence which attribute values are sent, so SSMSessionRunAs always resolves to the same value for a given user.",
+    "AWSReservedSSO_ roles created by IAM Identity Center are protected resources. AWS denies IAM TagRole operations on these roles, closing off the most direct native approach of tagging each permission set's role with a different SSMSessionRunAs value.",
+    "A per-document workaround exists: separate SSM session documents per role (e.g., SSMRunAs-Admin-Session with runAsDefaultUser=admin), each restricted via IAM policy to the corresponding permission set. This only works if the SSMSessionRunAs ABAC tag is removed entirely, because the tag overrides any document-level runAsDefaultUser setting.",
+    "The per-document workaround degrades user experience: users must specify --document-name on every session start. Without it, SSM falls back to SSM-SessionManagerRunShell. The ssm:SessionDocumentAccessCheck condition key can enforce document specification, but at the cost of usability.",
+    "Permission set inline policies can reference aws:PrincipalTag/SSMSessionRunAs in Condition blocks for defense-in-depth (e.g., deny StartSession unless the tag matches an expected value), but they cannot set or override the tag value -- they provide guardrails, not the actual mapping.",
+    "A Lambda session broker can achieve per-role mapping by intercepting session requests, parsing the caller's AWSReservedSSO_<PermissionSetName>_<suffix> role ARN via STS GetCallerIdentity, and calling SSM StartSession with the appropriate per-role session document.",
+    "The broker only handles session creation (control plane). The SSM WebSocket data channel flows directly between the user's session-manager-plugin and the SSM Agent on the target instance. There is no data-plane latency or throughput impact from the broker.",
+    "StartSession returns SessionId, StreamUrl (WebSocket endpoint), and TokenValue (encrypted auth token). The session-manager-plugin accepts these as its first argument, enabling the broker to return the response and the client to hand it directly to the plugin for session establishment.",
+    "When Lambda calls StartSession on behalf of a user, CloudTrail attributes the event to the Lambda execution role, not the original caller. This creates an audit attribution gap that must be addressed with compensating controls -- the Lambda must log the original caller ARN alongside the SessionId.",
+    "Per-role SSM session documents must be deployed to every member account, adding to the StackSet footprint. IAM policy conditions on session document access (ssm:SessionDocumentAccessCheck) provide defense-in-depth even if the broker is bypassed.",
+    "The session-manager-plugin uses a custom binary framing protocol over WebSocket after the initial JSON authentication handshake. Proxying this through API Gateway WebSocket would require reimplementing the full SSM agent message protocol, making the broker a control-plane-only intermediary by design."
+  ],
+  "concepts": [
+    {
+      "name": "SSMSessionRunAs Tag",
+      "description": "An IAM tag with key SSMSessionRunAs whose value specifies the OS user account for SSM sessions. SSM checks for this tag on the calling IAM principal (user, role, or STS session). When present, it overrides the runAsDefaultUser in the session preferences document."
+    },
+    {
+      "name": "IdC ABAC Attributes",
+      "description": "User attributes configured in IAM Identity Center's 'Attributes for access control' settings. These are sourced from the IdC identity store and passed as STS session tags (aws:PrincipalTag) when a user assumes any permission set. Attributes are per-user, not per-permission-set."
+    },
+    {
+      "name": "RunAs Resolution Precedence",
+      "description": "The order in which SSM determines the OS user for a session: (1) SSMSessionRunAs tag on the calling principal, (2) runAsDefaultUser in the document specified by DocumentName, (3) runAsDefaultUser in the account default SSM-SessionManagerRunShell document. The tag always wins when present."
+    },
+    {
+      "name": "AWSReservedSSO_ Protected Roles",
+      "description": "IAM roles created by IAM Identity Center in member accounts with names following AWSReservedSSO_<PermissionSetName>_<uniqueSuffix>. These roles are protected by AWS and cannot be tagged or modified by customers, but the permission set name is extractable from the role ARN."
+    },
+    {
+      "name": "Session Document (Standard_Stream)",
+      "description": "An SSM document of type Session that defines session preferences including runAsEnabled, runAsDefaultUser, idleSessionTimeout, and maxSessionDuration. Per-role documents can specify different RunAs users and be restricted to specific permission sets via IAM policy."
+    },
+    {
+      "name": "ssm:SessionDocumentAccessCheck",
+      "description": "A boolean condition key for ssm:StartSession that controls whether SSM validates the caller's permission to use the specified session document. Gates document access enforcement but does not influence RunAs user resolution or document selection."
+    },
+    {
+      "name": "StartSession API",
+      "description": "SSM API operation that initiates a Session Manager session. Accepts Target, optional DocumentName, Parameters, and Reason. Returns SessionId, StreamUrl (WebSocket endpoint), and TokenValue (encrypted auth token) needed by session-manager-plugin."
+    },
+    {
+      "name": "session-manager-plugin",
+      "description": "AWS-provided binary that establishes the WebSocket connection to the SSM data channel. Accepts six positional arguments: StartSession response JSON, region, 'StartSession', profile name, request parameters JSON, and SSM endpoint URL."
+    },
+    {
+      "name": "CloudTrail Attribution Gap",
+      "description": "When a Lambda function calls StartSession, CloudTrail records the Lambda execution role as the caller, not the original user. The broker must implement compensating logging to maintain audit traceability."
+    },
+    {
+      "name": "SSM Binary WebSocket Protocol",
+      "description": "After the initial JSON authentication handshake, SSM sessions use a custom binary framing protocol over WebSocket. This protocol is implemented by session-manager-plugin and the SSM Agent, making data-plane proxying impractical."
+    }
+  ],
+  "tensions": [
+    "Per-user vs. per-role identity: IdC ABAC attributes are fundamentally per-user. SSM's RunAs tag resolution treats the tag as a property of the calling principal. There is no native seam where permission set identity can influence the RunAs value, creating an architectural mismatch between IdC's identity model and the per-role mapping requirement.",
+    "Tag override vs. document settings: When the SSMSessionRunAs tag is present, it overrides runAsDefaultUser in any session document. The per-document workaround only works if the ABAC tag is removed entirely, forcing a choice between per-user override capability and per-role document-based mapping.",
+    "Audit fidelity vs. architectural simplicity: The Lambda broker decouples the session initiator (Lambda role) from the actual user, breaking CloudTrail attribution. Compensating logging adds complexity but is essential for security compliance.",
+    "Client-side simplicity vs. per-role mapping: Users must invoke a wrapper script that calls the broker API and feeds the response to session-manager-plugin, replacing the standard 'aws ssm start-session' workflow. This is a permanent UX cost for per-role mapping.",
+    "Protected roles vs. direct tagging: AWSReservedSSO_ roles cannot be tagged, closing off the most obvious native approach. This protection exists for good reason (preventing privilege escalation) but blocks a legitimate use case.",
+    "Defense-in-depth vs. operational overhead: IAM policies restricting document access per role provide security guarantees even if the broker is bypassed, but require coordinated management across permission sets, session documents, and member accounts.",
+    "Broker availability vs. session access: The Lambda broker becomes a single point of failure for per-role session initiation. If unavailable, per-role mapping is lost, though fallback to native SSM (without per-role mapping) remains possible.",
+    "Single shared document vs. per-role documents: Modifying a shared SSM document at runtime risks race conditions under concurrent access. Per-role documents are safer but require document lifecycle management across all member accounts via StackSets."
+  ],
+  "open_questions": [
+    "Could a future AWS feature allow IdC ABAC attributes to be scoped per-permission-set rather than per-user? This would natively solve per-role RunAs mapping. No public roadmap item was found.",
+    "Does the SSM StartSession API actually reject runAsDefaultUser if passed in the Parameters map, or does it silently ignore it? Testing would determine whether a single parameterized document could replace per-role documents.",
+    "What is the exact IAM permission set required on the Lambda execution role to call ssm:StartSession on target instances in member accounts? Cross-account session initiation may require additional trust relationships.",
+    "How does the TokenValue expiry window interact with broker response latency? If Lambda cold-starts add several seconds, does the token remain valid for the client to connect?",
+    "Can the broker architecture work with the AWS Console's built-in Session Manager connect button, or is it strictly limited to CLI/SDK-initiated sessions?",
+    "If the SSMSessionRunAs ABAC attribute is removed for the per-document workaround, does the session still log the correct originating user identity in CloudTrail and Session Manager audit logs?",
+    "Can the AWS CLI session-manager-plugin be configured with a default --document-name per profile, reducing UX friction of the per-document workaround without requiring the full broker?"
+  ],
+  "sources": [
+    {
+      "title": "Turn on Run As support for Linux and macOS managed nodes - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-preferences-run-as.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Session document schema - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-schema.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "StartSession API Reference - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_StartSession.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Actions, resources, and condition keys for AWS Systems Manager - Service Authorization Reference",
+      "url": "https://docs.aws.amazon.com/service-authorization/latest/reference/list_awssystemsmanager.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Start a session with a document by specifying session documents in IAM policies - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-specify-session-document.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Create a Session Manager preferences document (command line) - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-create-preferences-cli.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Pass session tags in AWS STS - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Attribute-based access control - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Resolve the IAM error Cannot perform the operation on the protected role AWSReservedSSO - AWS re:Post",
+      "url": "https://repost.aws/knowledge-center/identity-center-aws-reserved-sso",
+      "tier": "official_doc"
+    },
+    {
+      "title": "ABAC checklist - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac-checklist.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "start-session CLI Reference - AWS Systems Manager",
+      "url": "https://docs.aws.amazon.com/cli/latest/reference/ssm/start-session.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Referencing permission sets in resource policies - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/referencingpermissionsets.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "GetCallerIdentity API Reference - AWS STS",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Logging AWS Systems Manager API calls with AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS SSO and SSMSessionRunAs session tag - Hatem Mahmoud",
+      "url": "https://mahmoudhatem.wordpress.com/2020/12/17/aws-sso-and-ssmsessionrunas-session-tag/",
+      "tier": "blog"
+    },
+    {
+      "title": "Configuring AWS Systems Manager Session Manager run as support for federated users using session tags - AWS Cloud Operations Blog",
+      "url": "https://aws.amazon.com/blogs/mt/configuring-aws-systems-manager-session-manager-support-federated-users-using-session-tags/",
+      "tier": "blog"
+    },
+    {
+      "title": "Configure AWS IAM Identity Center ABAC for EC2 instances and Systems Manager Session Manager - AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/configure-aws-sso-abac-for-ec2-instances-and-systems-manager-session-manager/",
+      "tier": "blog"
+    },
+    {
+      "title": "aws-ssm-session - JavaScript library for SSM sessions (Browser and NodeJS)",
+      "url": "https://github.com/bertrandmartel/aws-ssm-session",
+      "tier": "community"
+    },
+    {
+      "title": "How to use AWS SSM Session Manager Plugin - DEV Community",
+      "url": "https://dev.to/leimd/how-to-use-aws-ssm-session-manager-plugin-33hh",
+      "tier": "community"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Per-role Linux identity mapping in SSM Session Manager is not achievable with native AWS mechanisms; a Lambda session broker is the only viable architecture, introducing audit attribution gaps and client workflow changes.",
+      "so_what": "The current per-user ABAC model in IAM Identity Center cannot differentiate Linux session identity by permission set. Achieving per-role mapping requires custom infrastructure (Lambda broker with per-role session documents) that adds operational complexity, changes the user workflow, and creates a CloudTrail attribution gap requiring compensating controls. The alternative is accepting per-user-only mapping.",
+      "bullets": [
+        "IdC ABAC attributes are per-user: the SSMSessionRunAs tag is identical regardless of which permission set is assumed, and AWSReservedSSO_ roles cannot be tagged to override this.",
+        "A Lambda broker intercepts session creation, parses the permission set name from the caller's role ARN, and calls StartSession with the correct per-role session document -- the data channel flows directly to the instance with no broker latency.",
+        "CloudTrail will attribute SSM sessions to the Lambda execution role, not the original user; compensating logs in the Lambda are mandatory for audit compliance.",
+        "Per-role session documents and corresponding IAM policy restrictions must be deployed to every member account via StackSets, expanding the infrastructure footprint.",
+        "A fragile native workaround exists (per-document RunAs without the ABAC tag, enforced via IAM policy) but requires removing per-user ABAC entirely and degrades UX by mandating --document-name on every session start."
+      ],
+      "action_required": "Decide whether to invest in a Lambda session broker PoC (accepting audit and UX trade-offs) or accept per-user-only Linux identity mapping as sufficient for the current compliance requirements."
+    },
+    "product_owner": {
+      "headline": "AWS does not natively support giving the same person different Linux usernames based on which access level they select; a custom component can solve this but adds complexity.",
+      "so_what": "When a user picks between 'Admin' and 'Developer' access in the AWS portal, they currently always land as the same Linux user on servers. Making the Linux username change based on the access level requires building a custom session broker component. Without it, audit logs show user identity but not which access level was active during the session.",
+      "bullets": [
+        "The current setup ties the Linux username to the person, not the access level -- Alice is always 'alice' whether she picks Admin or Developer access.",
+        "AWS protects the roles it creates for access levels and does not allow changing their configuration to set different Linux usernames.",
+        "A custom Lambda session broker can automatically select the correct Linux user based on the access level chosen, but it changes how users connect to servers (wrapper script instead of standard AWS command).",
+        "The broker creates an audit gap: AWS logs will show the broker initiated the session, not the actual user. Extra logging in the broker is needed to maintain traceability.",
+        "A simpler workaround exists but is less user-friendly: users must type extra flags every time they connect, and the per-person username feature must be turned off entirely."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Decide whether per-role Linux identity mapping justifies the added infrastructure complexity, or whether per-user mapping meets current compliance and operational needs.",
+        "work_to_assign": [
+          "If proceeding: build a Lambda session broker proof-of-concept covering session creation, role-to-document mapping, and compensating audit logging.",
+          "Evaluate whether the per-document workaround (no broker, but degraded UX) is acceptable as an interim solution.",
+          "Document the per-user RunAs behavior as a known limitation for stakeholders who expect per-role mapping."
+        ],
+        "leadership_input": "Architects should assess whether the CloudTrail attribution gap in the broker model is acceptable for the organization's audit requirements, and whether the operational cost of maintaining per-role session documents across member accounts is justified."
+      },
+      "questions_to_ask_engineering": [
+        "How much operational overhead does the Lambda broker add compared to the current per-user setup, including deployment, monitoring, and incident response?",
+        "Is the CloudTrail attribution gap addressable in a way that satisfies audit and compliance requirements?",
+        "Could AWS release a native feature for per-permission-set ABAC attributes, and should the team wait or build now?"
+      ]
+    }
+  }
+}
