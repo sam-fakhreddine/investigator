@@ -1,0 +1,280 @@
+{
+  "topic": "AWS Security Hub Central Configuration Migration",
+  "date": "2026-02-27",
+  "status": "Complete",
+  "question": "What is the recommended migration path from a legacy AWS Security Hub configuration to the new central configuration model with consolidated control findings?",
+  "context": "AWS Security Hub has historically operated as a per-account, per-region service requiring each account to independently manage standards, controls, and findings. In November 2023 AWS released central configuration GA, allowing a delegated administrator to manage the entire organization's Security Hub posture through configuration policies. Simultaneously, consolidated control findings (GA February 2023) replaced the legacy per-standard finding model. Organizations with long-running Security Hub deployments face a two-track migration: adopting central configuration governance AND enabling consolidated control findings, each with distinct prerequisites, breaking changes, and rollback constraints.",
+  "quick_reference": {
+    "title": "Migration Step Summary",
+    "columns": [
+      "Step",
+      "Action",
+      "Where",
+      "Prerequisite / Note"
+    ],
+    "rows": [
+      [
+        "1",
+        "Verify AWS Organizations integration",
+        "AWS Organizations management account",
+        "Security Hub must be integrated with Organizations; delegated admin cannot be management account"
+      ],
+      [
+        "2",
+        "Designate a delegated administrator",
+        "Management account, target home Region",
+        "Use Organizations or Security Hub console; must be done in the intended home Region"
+      ],
+      [
+        "3",
+        "Resolve existing finding aggregator",
+        "Delegated admin account",
+        "Existing aggregation Region automatically becomes home Region; change it before enabling central config"
+      ],
+      [
+        "4",
+        "Enable central configuration via console or API",
+        "Delegated admin account, home Region",
+        "Sets AutoEnable=false and AutoEnableStandards=NONE; existing account configs are overridden once policy applied"
+      ],
+      [
+        "5",
+        "Select home Region and linked Regions",
+        "Central configuration wizard",
+        "Opt-in Regions must be enabled first; home Region cannot be changed after central config is active"
+      ],
+      [
+        "6",
+        "Create and apply a configuration policy",
+        "Delegated admin, home Region",
+        "Test on a leaf OU first; policy applies to home Region and all linked Regions simultaneously; 20-policy org limit"
+      ],
+      [
+        "7",
+        "Enable consolidated control findings",
+        "Security Hub Settings > General (per account or via CLI)",
+        "24-hour transition window; existing findings archived; customer-supplied fields (Workflow, Note, etc.) reset to default"
+      ],
+      [
+        "8",
+        "Update downstream integrations",
+        "EventBridge, Lambda, custom insights, SIEM",
+        "ProductFields.ControlId and StandardsArn fields removed; update filters to Compliance.SecurityControlId and Compliance.AssociatedStandards"
+      ],
+      [
+        "9",
+        "Export findings before transition (optional)",
+        "S3 via custom action + EventBridge rule",
+        "Archived findings retained 30 days; active findings retained 90 days after disable; export if longer retention needed"
+      ],
+      [
+        "10",
+        "Verify sync with check_sync / automation",
+        "CI/CD or manual",
+        "Run check_sync.py equivalent verification; confirm policy association status per OU in central config console"
+      ]
+    ],
+    "notes": "Rollback constraint: central configuration cannot be disabled via console or Security Hub API while configuration policies or associations exist. Disabling requires first disassociating all accounts and OUs, then deleting all policies, then switching ConfigurationType to LOCAL via API."
+  },
+  "key_findings": [
+    "Central configuration and consolidated control findings are separate but complementary migrations \u2014 central configuration governs which accounts and regions have Security Hub enabled and which controls are active; consolidated control findings changes the ASFF schema and finding generation model. Both can be adopted independently, but the recommended path is to enable them together.",
+    "The legacy model generates one finding per security check per enabled standard. With consolidated control findings enabled, Security Hub generates a single finding per security check regardless of how many standards contain that control, reducing finding volume significantly and eliminating duplicate-alert noise.",
+    "Enabling consolidated control findings triggers an automatic archival of all existing standard-based findings. New consolidated findings are created within approximately 24 hours. Customer-supplied fields (Confidence, Criticality, Note, RelatedFindings, UserDefinedFields, VerificationState, Workflow) on archived findings are reset to default values in the new findings \u2014 this is a data-continuity break requiring downstream system updates.",
+    "Critical ASFF field changes on enabling consolidated control findings: ProductFields.ControlId, ProductFields.RuleId, ProductFields.StandardsArn, ProductFields.StandardsGuideArn, ProductFields.StandardsSubscriptionArn, and ProductFields.StandardsControlArn are removed. Compliance.SecurityControlId and Compliance.AssociatedStandards are the replacements. Finding ARN format changes from subscription/... to security-control/... and GeneratorId format changes from standard-specific to security-control/<ControlId>.",
+    "EventBridge rules and custom insights that filter on removed ProductFields fields or on standard-specific control ID formats (e.g., PCI.EC2.2) will silently stop matching after consolidation \u2014 there is no migration error; rules simply fail to trigger. Filters must be rewritten to use Compliance.SecurityControlId (e.g., EC2.2) and Compliance.AssociatedStandards.",
+    "Central configuration requires AWS Organizations integration and a designated delegated administrator account (which cannot be the Organizations management account). The home Region cannot be changed while central configuration is active; changing it requires disabling central configuration entirely and reconfiguring \u2014 it can only be changed prior to enabling central configuration by deleting and recreating the finding aggregator.",
+    "Configuration policies apply to the home Region and all linked Regions simultaneously \u2014 there is no way to apply a policy to a subset of linked Regions. A policy that disables a control disables it across every linked Region. Global resource controls (e.g., IAM) are automatically disabled by AWS in all linked Regions except the home Region to prevent duplicate global-resource findings.",
+    "Once central configuration is enabled, member accounts designated as centrally managed cannot use account-specific Security Hub APIs (BatchDisableStandards, BatchEnableStandards, BatchUpdateStandardsControlAssociations, DisableSecurityHub, EnableSecurityHub, UpdateStandardsControl) in the home Region or any linked Region. Self-managed accounts retain independent API access.",
+    "Rollback from central configuration to local configuration is possible but requires manual cleanup. Reverting to local configuration requires first deleting all configuration policies and disassociating all accounts/OUs \u2014 this cleanup is required before the disable step, which is available via both console and API. The final call is UpdateOrganizationConfiguration with ConfigurationType=LOCAL.",
+    "Automation rules created by the administrator account apply to findings in all member accounts but are regional \u2014 rules must be replicated to each linked Region. The maximum is 100 automation rules per administrator account. Consolidated control findings introduces Compliance.SecurityControlId as a matchable field in automation rule criteria, enabling standard-agnostic suppression and severity adjustment.",
+    "Accounts created on or after February 23, 2023 have consolidated control findings enabled by default. Older accounts must explicitly opt in via the console (Settings > General > Controls) or via the CLI using update-security-hub-configuration --control-finding-generator SECURITY_CONTROL. The administrator account setting cascades to all member accounts.",
+    "An existing finding aggregator (cross-region aggregation) is preserved when enabling central configuration \u2014 the aggregation Region automatically becomes the default home Region. Central configuration then adds governance capability (control management across regions) on top of the existing aggregation layer. Automation rules previously created in linked Regions will no longer apply once the aggregator is established; only home Region rules propagate.",
+    "The 20-configuration-policy limit is a hard organizational cap. Large organizations with complex OU structures must design their policy hierarchy carefully \u2014 policies can be applied at OU level and inherited by child accounts and sub-OUs. Exceeding 15 targets per policy update operation requires batching API calls.",
+    "IaC-managed deployments (Terraform, CloudFormation) face an ordering dependency: AWS Config recording must be active in every linked Region before policy association will succeed. CloudFormation rollbacks may leave orphaned policy associations that prevent disabling central configuration \u2014 these must be manually cleaned up via the AWS CLI."
+  ],
+  "concepts": [
+    {
+      "name": "Central Configuration",
+      "description": "An AWS Security Hub feature (GA November 2023) enabling the delegated administrator to manage Security Hub enablement, standards, and controls across all organization accounts and Regions from a single home Region using configuration policies."
+    },
+    {
+      "name": "Local Configuration (Legacy)",
+      "description": "The pre-central-configuration model in which each AWS account manages its own Security Hub settings independently per Region. Delegated administrators can auto-enable for new accounts only; existing accounts are not configurable centrally."
+    },
+    {
+      "name": "Configuration Policy",
+      "description": "A named set of Security Hub settings (enabled/disabled state, standards, control list, control parameters) created by the delegated administrator and applied to OUs, accounts, or the organization root. Up to 20 custom policies per organization."
+    },
+    {
+      "name": "Home Region",
+      "description": "The single AWS Region designated as the administrative center for central configuration. Configuration policies are created here and take effect in the home Region and all linked Regions. Cannot be an opt-in Region; the home Region cannot be changed while central configuration is active \u2014 changing it requires disabling central configuration entirely and reconfiguring."
+    },
+    {
+      "name": "Linked Region",
+      "description": "An AWS Region configured alongside the home Region such that configuration policies apply there automatically. Linked Regions must have Security Hub enabled. Opt-in Regions must be explicitly activated before policies can take effect."
+    },
+    {
+      "name": "Delegated Administrator",
+      "description": "The AWS account designated via AWS Organizations to act as the Security Hub administrator for the entire organization. Cannot be the Organizations management account. Manages central configuration, configuration policies, and organization-wide findings."
+    },
+    {
+      "name": "Centrally Managed Account",
+      "description": "An organization account that has been placed under delegated administrator control via a configuration policy. Cannot independently use account-specific Security Hub APIs (EnableSecurityHub, BatchEnableStandards, etc.) in home or linked Regions."
+    },
+    {
+      "name": "Self-Managed Account",
+      "description": "An organization account explicitly excluded from central policy control. Retains independent use of account-specific Security Hub APIs per Region, but the delegated administrator can still read its findings."
+    },
+    {
+      "name": "Consolidated Control Findings",
+      "description": "A Security Hub setting (GA February 2023) that generates a single finding per security check regardless of how many standards contain that control, rather than one finding per control per standard. Enabled by default for accounts created after February 23, 2023."
+    },
+    {
+      "name": "AWS Security Finding Format (ASFF)",
+      "description": "The JSON schema for all Security Hub findings. Enabling consolidated control findings removes several ProductFields sub-fields (ControlId, RuleId, StandardsArn, StandardsGuideArn, etc.) and adds Compliance.SecurityControlId and Compliance.AssociatedStandards."
+    },
+    {
+      "name": "Finding Aggregator",
+      "description": "The Security Hub resource that enables cross-Region aggregation, replicating findings and compliance statuses from linked Regions to the home Region. Pre-existing aggregation Region becomes the default home Region when central configuration is enabled."
+    },
+    {
+      "name": "Automation Rules",
+      "description": "Security Hub administrator-level rules that automatically update finding fields (Severity, Workflow, Note, etc.) based on criteria matched against ingested findings. Regional \u2014 must be replicated to each linked Region. Cannot modify findings retroactively. Maximum 100 per administrator account."
+    },
+    {
+      "name": "STANDARD_CONTROL (legacy generator mode)",
+      "description": "The legacy control finding generator mode in which Security Hub creates separate findings for each enabled standard containing a control. Produces finding volume proportional to the number of enabled standards."
+    },
+    {
+      "name": "SECURITY_CONTROL (consolidated generator mode)",
+      "description": "The consolidated control finding generator mode. Enabled via update-security-hub-configuration --control-finding-generator SECURITY_CONTROL. Generates one finding per control across all standards. Default for accounts created after February 23, 2023."
+    }
+  ],
+  "tensions": [
+    "Adopting central configuration removes account autonomy \u2014 member accounts lose the ability to enable, disable, or tune controls independently. This may conflict with team-level or application-level security customization requirements.",
+    "Enabling consolidated control findings permanently archives existing findings and resets customer-supplied metadata fields (Workflow, Note, Criticality, etc.). There is no in-place migration of those values \u2014 data fidelity is sacrificed at the point of transition.",
+    "The home Region cannot be changed while central configuration is active; changing it requires disabling central configuration entirely and reconfiguring. Organizations with an existing finding aggregator in a suboptimal Region must accept it as the home Region or delay migration to change it \u2014 changing it requires destroying and recreating the aggregator, which may cause data gaps.",
+    "Configuration policies apply uniformly across home and all linked Regions with no per-Region override \u2014 a control disabled at the OU level is disabled in every linked Region. This creates tension for organizations where different Regions have different compliance requirements.",
+    "The 20-policy organizational limit forces large organizations to use broad, shared policies rather than fine-grained per-team policies. Organizations with many BUs or compliance boundaries may exhaust this limit quickly.",
+    "IaC-managed environments face a chicken-and-egg ordering dependency: AWS Config must be recording in linked Regions before policy association succeeds, but many IaC pipelines provision Security Hub and Config simultaneously, causing race conditions.",
+    "Rollback from central configuration is procedurally complex and not self-service via the console \u2014 it requires API calls and manual cleanup of policy associations, creating operational risk if a rollback is needed urgently.",
+    "Automation rules are regional \u2014 they do not automatically propagate to linked Regions under central configuration. Teams must separately deploy rules to each Region, creating a governance gap between configuration policy (org-wide) and automation rule (regional) management."
+  ],
+  "open_questions": [
+    "Does enabling central configuration automatically propagate consolidated control findings settings to all member accounts, or must the consolidated control findings setting be managed independently per account or via a separate API call?",
+    "What is the exact behavior for findings in linked Regions that were generated under the legacy STANDARD_CONTROL mode after the home Region switches to SECURITY_CONTROL \u2014 are they archived immediately or on the next evaluation cycle?",
+    "Are there documented SLAs for how quickly configuration policy changes propagate to all member accounts across linked Regions in large organizations (thousands of accounts)?",
+    "Is there a supported path for selectively migrating accounts to consolidated control findings before enabling central configuration, or must both changes be applied simultaneously?",
+    "How do third-party SIEM integrations (Splunk, Datadog, Sumo Logic) that consume Security Hub findings via EventBridge or S3 export handle the ASFF field removals \u2014 do vendors publish compatibility matrices for the consolidated finding format?",
+    "What is the behavior of existing Security Hub automation rules that reference removed ProductFields sub-fields after consolidated control findings is enabled \u2014 do they error, fail silently, or get automatically translated?"
+  ],
+  "sources": [
+    {
+      "title": "Understanding central configuration in Security Hub CSPM - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/central-configuration-intro.html"
+    },
+    {
+      "title": "Enabling central configuration in Security Hub CSPM - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/start-central-configuration.html"
+    },
+    {
+      "title": "Disabling central configuration in Security Hub CSPM - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/stop-central-configuration.html"
+    },
+    {
+      "title": "How configuration policies work in Security Hub CSPM - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/configuration-policies-overview.html"
+    },
+    {
+      "title": "Generating and updating control findings - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/controls-findings-create-update.html"
+    },
+    {
+      "title": "Impact of consolidation on ASFF fields and values - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/asff-changes-consolidation.html"
+    },
+    {
+      "title": "Introducing new central configuration capabilities in AWS Security Hub - AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/introducing-new-central-configuration-capabilities-in-aws-security-hub/"
+    },
+    {
+      "title": "Consolidating controls in Security Hub: The new controls view and consolidated findings - AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/consolidating-controls-in-security-hub-the-new-controls-view-and-consolidated-findings/"
+    },
+    {
+      "title": "Prepare for consolidated controls view and consolidated control findings in AWS Security Hub - AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/prepare-for-consolidated-controls-view-and-consolidated-control-findings-in-aws-security-hub/"
+    },
+    {
+      "title": "Effect of account actions on Security Hub CSPM data - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-data-retention.html"
+    },
+    {
+      "title": "Understanding automation rules in Security Hub CSPM - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/automation-rules.html"
+    },
+    {
+      "title": "Understanding cross-Region aggregation in Security Hub CSPM - AWS Docs",
+      "url": "https://docs.aws.amazon.com/securityhub/latest/userguide/finding-aggregation.html"
+    },
+    {
+      "title": "Announcing central configuration capabilities in AWS Security Hub - AWS What's New",
+      "url": "https://aws.amazon.com/about-aws/whats-new/2023/11/aws-security-hub-central-configuration/"
+    },
+    {
+      "title": "Announcing Consolidated Control Findings and a Consolidated Controls View - AWS What's New",
+      "url": "https://aws.amazon.com/about-aws/whats-new/2023/02/aws-security-hub-consolidated-control-findings-view/"
+    },
+    {
+      "title": "Security Hub CSPM automation rule migration - AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/security-hub-cspm-automation-rule-migration-to-security-hub/"
+    },
+    {
+      "title": "AWS Security Hub Best Practices - AWS Security Services Best Practices Guide",
+      "url": "https://aws.github.io/aws-security-services-best-practices/guides/security-hub/"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Migrating to Security Hub central configuration is a one-way, organizationally scoped change that eliminates per-account configuration drift but requires a coordinated ASFF schema migration with breaking changes to existing alert integrations.",
+      "so_what": "Central configuration locks down Security Hub governance for the entire AWS organization from a single delegated account, preventing teams from silently disabling controls or deviating from baselines. However, the simultaneous consolidated control findings migration breaks existing EventBridge rules, SIEM filters, and Lambda-based automation \u2014 any integration that referenced legacy ProductFields control ID fields will stop triggering silently, which means alert coverage gaps exist from the moment of cutover until integrations are updated.",
+      "bullets": [
+        "Central configuration cannot be partially rolled back via console once active \u2014 disabling it requires manually deleting all configuration policies and associations via API before calling UpdateOrganizationConfiguration with ConfigurationType=LOCAL.",
+        "The home Region is an irrevocable commitment once central configuration is enabled; changing it requires destroying the existing finding aggregator and recreating it in the target Region before migration starts.",
+        "Consolidated control findings permanently archives existing findings and resets customer-supplied metadata (Workflow, Note, Criticality); no in-place migration of those values is possible.",
+        "Automation rules are regional and do not auto-propagate to linked Regions under central configuration; a separate deployment step is required to replicate rules across all linked Regions.",
+        "IaC-managed environments (Terraform, CloudFormation) require AWS Config to be recording in all linked Regions before policy association succeeds \u2014 ordering dependencies must be explicitly declared in deployment pipelines."
+      ],
+      "action_required": "Leadership must authorize a pre-migration audit covering: home Region selection, inventory of existing EventBridge rules and SIEM integrations referencing legacy ProductFields, and a coordinated cutover window with integration update work scoped. This is not a zero-downtime migration without pre-work."
+    },
+    "product_owner": {
+      "headline": "AWS is changing how security alerts are generated and managed across the organization's cloud accounts, and the migration requires updating automated alerting systems or they will silently stop working.",
+      "so_what": "Security Hub is the central system that monitors whether the organization's AWS accounts follow security rules. Migrating to the new model gives the security team a single control panel for all accounts instead of managing each account separately. The risk is that the alert format is changing in a way that breaks existing automated responses \u2014 a security finding could occur and go unnoticed if the alerting pipeline is not updated before the migration completes.",
+      "bullets": [
+        "After migration, the organization's security team can enforce the same security rules across all AWS accounts from one place, which reduces the risk of accounts silently drifting out of compliance.",
+        "Security alerts (called findings) will be de-duplicated: instead of receiving the same alert multiple times (once per compliance standard), teams receive one alert per issue \u2014 this reduces alert fatigue.",
+        "Existing automated responses to security alerts (for example, a ticket being automatically created, or a Lambda function being triggered) use a field format that AWS is removing. These automations must be updated before the migration or they will stop working with no visible error.",
+        "Historical finding data \u2014 including analyst notes, severity overrides, and workflow statuses \u2014 is not carried forward to the new finding format. Any findings that were in progress or marked as exceptions will need to be reprocessed.",
+        "The migration cannot be partially reversed once started; disabling the new model requires a manual cleanup process that must involve the security engineering team."
+      ],
+      "risk_level": "High",
+      "next_steps": {
+        "po_action": "PO/EM must schedule an integration-audit sprint before any migration window is opened. The security engineering team needs time to inventory all systems consuming Security Hub findings (ticketing, SIEM, Lambda automations) and confirm which are impacted by the field format change. Do not authorize the migration cutover until that inventory is complete and remediation work is scoped.",
+        "work_to_assign": [
+          "Audit all EventBridge rules and Lambda functions that reference Security Hub finding fields, specifically any that filter on ProductFields.ControlId, ProductFields.RuleId, ProductFields.StandardsArn, or similar legacy fields.",
+          "Identify and export any in-progress or suppressed findings that carry analyst notes or workflow overrides before the migration \u2014 these fields are reset during transition and are not recoverable afterward.",
+          "Determine the correct home Region for central configuration (must match or replace the existing finding aggregator Region) and confirm with the platform team before migration starts.",
+          "Replicate any Security Hub automation rules to all linked Regions, as they do not auto-propagate under central configuration.",
+          "Update IaC modules (Terraform or CloudFormation) to enforce correct dependency ordering: AWS Config recording must be active before Security Hub central configuration policy association runs.",
+          "Update SIEM integration (Splunk, Datadog, or equivalent) filter definitions to use Compliance.SecurityControlId and Compliance.AssociatedStandards instead of removed ProductFields."
+        ],
+        "leadership_input": "Architects and senior security engineers must select the home Region and define the configuration policy hierarchy (which OUs are centrally managed vs self-managed) before migration begins. This decision shapes which accounts lose independent control over their security settings and cannot be easily changed after activation."
+      },
+      "questions_to_ask_engineering": [
+        "Which existing EventBridge rules or automated responses will break when we switch to the new finding format, and how long will it take to update them?",
+        "Have we identified and exported any findings with analyst notes or suppression decisions that would be lost in the transition?",
+        "Is the current finding aggregator Region the right home Region for central configuration, or do we need to move it before migrating?"
+      ]
+    }
+  }
+}

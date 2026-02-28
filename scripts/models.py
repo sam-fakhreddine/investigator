@@ -18,7 +18,8 @@ Validation layers:
      must exist when findings exist; no duplicate URLs; coverage ratio
 """
 
-from typing import Annotated, Optional, Union
+from datetime import datetime
+from typing import Annotated, Literal, Optional, Union
 from pydantic import (
     AfterValidator,
     BaseModel,
@@ -57,6 +58,15 @@ def _non_empty(v: str) -> str:
     return v
 
 
+def _iso_date(v: str) -> str:
+    """Reject date strings that are not YYYY-MM-DD — free-form dates are unprocessable."""
+    try:
+        datetime.strptime(v, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"date must be YYYY-MM-DD, got {v!r}")
+    return v
+
+
 SingleLineStr = Annotated[str, AfterValidator(_no_newlines), AfterValidator(_non_empty)]
 BulletStr = Annotated[str, AfterValidator(_no_newlines), AfterValidator(_non_empty)]
 SafeUrlStr = Annotated[str, AfterValidator(_safe_url)]
@@ -71,9 +81,24 @@ class QuickReference(BaseModel):
     notes: Optional[str] = None
 
 
+SourceTier = Literal["official_doc", "user_guide", "blog", "community"]
+
+
 class Source(BaseModel):
     title: SingleLineStr
     url: SafeUrlStr
+    tier: Optional[SourceTier] = Field(
+        default=None,
+        description=(
+            "Source authority tier. "
+            "official_doc = API/SDK/service reference docs; "
+            "user_guide = official user guides and tutorials; "
+            "blog = vendor or third-party blog posts; "
+            "community = Stack Overflow, GitHub issues, forums. "
+            "Prefer official_doc > user_guide > blog > community. "
+            "Findings backed only by blog or community sources should be hedged."
+        ),
+    )
 
 
 class Concept(BaseModel):
@@ -154,8 +179,8 @@ class AudienceBriefs(BaseModel):
 
 class Investigation(BaseModel):
     topic: str
-    date: str
-    status: str
+    date: Annotated[str, AfterValidator(_iso_date)]
+    status: Literal["Complete", "In Progress", "Superseded"]
     question: str
     context: str
     quick_reference: Optional[QuickReference] = None

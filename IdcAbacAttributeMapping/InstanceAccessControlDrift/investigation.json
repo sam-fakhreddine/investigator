@@ -1,7 +1,7 @@
 {
   "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration \u2014 Drift, Idempotency, and Update Behavior",
   "date": "2026-02-27",
-  "status": "complete",
+  "status": "Complete",
   "question": "What are the documented drift, idempotency, and update behaviors of InstanceAccessControlAttributeConfiguration in IAM Identity Center when managed via CloudFormation or CDK \u2014 specifically: what happens on re-apply, how updates differ from creates, and what ordering constraints exist?",
   "context": "Teams managing IAM Identity Center ABAC configuration via CloudFormation or CDK need to understand how the resource behaves across stack creates, updates, and re-deploys. Unlike most CloudFormation resources, this resource maps to a singleton per IdC instance (one ABAC config per instance), and the underlying API separates Create from Update into distinct calls. This creates non-obvious failure modes when IaC is deployed against an instance where ABAC was previously configured outside of CloudFormation, or when multiple stacks target the same IdC instance.",
   "quick_reference": {

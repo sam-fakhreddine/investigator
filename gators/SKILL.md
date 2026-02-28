@@ -166,9 +166,11 @@ investigation.json path: /Users/samfakhreddine/repos/research/<PascalCaseName>/i
 
 3. Verify every URL in the sources array: VERIFIED | REDIRECT | DEAD | UNVERIFIABLE.
 
-4. Spot-check high-stakes factual claims against live documentation or web search.
+4. Verify ALL key findings against live documentation or web search — not just high-stakes ones.
+   Every finding gets a row in the Finding Verification table.
    Assign: CONFIRMED | PARTIALLY CONFIRMED | UNVERIFIED | CONTRADICTED.
    Record evidence and the source used for each verdict.
+   Also flag: INTERNAL_CONFLICT (two findings contradict each other), NEEDS_PRIMARY_SOURCE (finding backed only by blog/community tier sources), CONFIRM_OR_HEDGE (hedged claim that can be definitively confirmed or refuted).
 
 5. Write validation_report.md to the investigation folder.
 
@@ -343,5 +345,8 @@ The lead does not add new analysis or editorial commentary. All content quoted d
 | `PARTIALLY CONFIRMED` | Validator | Part of claim supported; part not |
 | `UNVERIFIED` | Validator | Could not confirm or deny |
 | `CONTRADICTED` | Validator | Claim contradicted by available evidence |
+| `INTERNAL_CONFLICT` | Validator | Finding contradicts another finding in the same investigation |
+| `NEEDS_PRIMARY_SOURCE` | Validator | Finding backed only by blog/community sources — needs official_doc or user_guide |
+| `CONFIRM_OR_HEDGE` | Validator | Hedged claim that can be definitively confirmed or refuted |
 | `SUSTAINED` | Arbiter | Validator was correct — investigator must correct |
 | `OVERTURNED` | Arbiter | Investigator was correct — validator's objection dismissed |

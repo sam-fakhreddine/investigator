@@ -36,6 +36,37 @@ If the investigation has concrete outputs — paths, configurations, commands, d
 
 `quick_reference` is **required** when the investigation has actionable outputs. It is optional only when the investigation is purely analytical with no concrete recommendation.
 
+### Research Order — Sources Before Findings
+
+Research and collect sources **before** writing `key_findings`. The correct order is:
+
+1. Identify candidate claims from the question
+2. Search for primary sources that confirm or refute each candidate
+3. Write only the findings that a found source directly supports
+4. If you cannot find a primary source for a candidate claim, do not write it as a `key_finding` — place it in `open_questions` as an interrogative (e.g., *"Does X actually behave like Y?"*)
+
+This pre-commitment order prevents confabulation: if a claim has no source, it has no finding.
+
+### Uncertainty and Hedging
+
+If a claim is not definitively confirmed by a primary source, hedge it explicitly:
+- Use *"is documented to"*, *"as of [date]"*, *"based on [source]"*, *"appears to"* — not bare declaratives
+- Do not present tentative findings as settled facts
+- If a topic has conflicting documentation, represent the conflict in the finding rather than picking a side
+
+### Source Authority Hierarchy
+
+Prefer sources in this order — higher tier = stronger claim:
+
+| Tier | Type | `tier` value |
+|------|------|-------------|
+| 1 | Official API / SDK / service reference | `official_doc` |
+| 2 | Official user guides and tutorials | `user_guide` |
+| 3 | Vendor or third-party blog posts | `blog` |
+| 4 | Stack Overflow, GitHub issues, forums | `community` |
+
+Set the `tier` field on every source. A finding backed only by tier 3 or 4 sources must use hedged language. A finding that contradicts a tier 1 source must not be written as a key finding — move it to `open_questions`.
+
 ### Scope Discipline
 
 Each investigation covers exactly one focused question. If the question handed to you is compound or ambiguous, investigate only the most specific interpretation and flag the broader scope in `open_questions`. Do not attempt to cover everything — depth on a narrow question produces more useful findings than breadth on a wide one.
@@ -100,15 +131,16 @@ Write exactly **one file**: `investigation.json`. Do not write `investigation.md
       "required": ["title", "url"],
       "properties": {
         "title": { "type": "string" },
-        "url": { "type": "string" }
+        "url": { "type": "string" },
+        "tier": { "type": "string", "enum": ["official_doc", "user_guide", "blog", "community"], "description": "Source authority tier — set on every source. official_doc > user_guide > blog > community." }
       }
     }
   },
   "required": ["topic", "date", "status", "question", "context"],
   "properties": {
     "topic": { "type": "string" },
-    "date": { "type": "string" },
-    "status": { "type": "string" },
+    "date": { "type": "string", "description": "YYYY-MM-DD format only." },
+    "status": { "type": "string", "enum": ["Complete", "In Progress", "Superseded"] },
     "question": { "type": "string" },
     "context": { "type": "string" },
     "quick_reference": {

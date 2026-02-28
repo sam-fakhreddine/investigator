@@ -1,0 +1,231 @@
+{
+  "topic": "RXT Short Squeeze Conditions \u2014 February 2026",
+  "date": "2026-02-26",
+  "status": "Complete",
+  "question": "Does Rackspace Technology (NASDAQ: RXT) currently exhibit measurable short squeeze conditions as of February 26, 2026?",
+  "context": "Rackspace Technology (RXT) is a cloud managed services company that traded at near-penny-stock levels early in 2026. On February 18, 2026, the company announced a strategic partnership with Palantir Technologies to host and manage Palantir Foundry and AIP in Rackspace private cloud and UK sovereign data centers. The announcement triggered a historic price and volume explosion that compressed a pre-existing large short position. The question asks whether measurable squeeze conditions persist on February 26, the company's Q4 2025 earnings date, or whether the primary squeeze event has already run its course.",
+  "key_findings": [
+    "The primary short squeeze event in RXT appears to have already occurred during the week of February 18, 2026. Short interest was reported at above 27% of float in the weeks before the Palantir announcement. The announcement triggered a +265% price surge over five trading days (approximately February 18\u201323, 2026), with intraday volume on February 18 reaching 373.3 million shares \u2014 approximately 232 times the prior 20-day average volume of 1.61 million shares.",
+    "As of the most recent exchange-reported short interest data (Benzinga, February 23, 2026), shares short stand at 9.13 million, representing 8.44% of float. This is a sharp decline from the pre-squeeze level above 27%, indicating substantial short covering has already taken place. The 27.3% rise in the short interest figure reported in the Benzinga article refers to the change relative to the prior reporting period, not the current SI% level.",
+    "Days-to-cover stands at 5.09 days based on recent trading volumes. This is a moderate reading \u2014 traditionally, values above 5 are considered elevated, but given that post-squeeze volumes remain far above historical norms (66\u201396 million shares/day versus a historical average of 1.6 million), this metric is compressed by artificially elevated denominator volume and may not reflect true squeeze pressure.",
+    "On February 26, 2026 (earnings day), RXT reported Q4 2025 results that beat consensus EPS by a wide margin: actual EPS of -$0.01 versus expected -$0.04 (a 75% positive surprise). Revenue came in at $682.8M versus an expected $674.9M. The stock surged approximately 27.43% in premarket and was up ~10.74% intraday, trading around $1.41\u2013$1.52. This positive earnings reaction layered a new fundamental catalyst on top of the residual post-squeeze momentum.",
+    "Technical momentum indicators as of February 18 showed RSI at 17.97 and MFI at 8.19, reflecting a sharply oversold intraday condition as the stock gave back some initial gains. By February 20, RSI had recovered to 78.28, indicating the stock had rebounded into overbought territory within days. ADX readings above 54 on both dates signal a strong directional trend with elevated volatility (ATR ~$0.07).",
+    "The stock's current price (~$1.41 on February 26) sits well above both the 50-day MA ($0.86) and close to the 200-day MA ($1.21), reflecting the post-squeeze repositioning. The 52-week high is $3.03 and the 52-week low is $0.393, illustrating the magnitude of the recent move relative to baseline.",
+    "Cost-to-borrow data was not retrievable from publicly available sources for the current period. Pre-squeeze cost-to-borrow at >27% SI would typically be very high (often 50\u2013200%+ annualized for hard-to-borrow names), but post-squeeze rates are likely declining as short interest normalizes. Fintel and ORTEX list RXT borrow rate data but paywalled real-time figures were inaccessible.",
+    "Float utilization data was not available from the accessible sources. With shares outstanding of approximately 243.59 million (as of February 23, 2026) and 9.13 million shares short, the implied short interest as a percentage of shares outstanding is approximately 3.7%, consistent with the 8.44% of float figure if the float is smaller than total shares outstanding.",
+    "Options market pricing implied a decline to $0.35 by mid-May 2026 as of the time of the Barchart analysis, suggesting derivatives market participants anticipated reversal despite the post-Palantir surge. Analyst consensus is Hold with a mean price target of $1.48, implying minimal further upside from current levels. Prior to the February 26 earnings event, Raymond James had already downgraded RXT to Market Perform on June 2, 2025 (following Q1 2025 earnings), citing a longer path to improved growth and free cash flow \u2014 this was a pre-existing bearish analyst stance, not a new action on February 26.",
+    "The short squeeze conditions that existed pre-February 18 (high SI%, hard-to-borrow, compressed float, rising volume) have largely unwound. What remains on February 26 is a stock trading with elevated but declining volume, above its key moving averages, with moderate residual short interest (8.44%), a fresh positive earnings surprise, and mixed analyst sentiment. The squeeze phase appears to be in its final stages rather than at peak pressure."
+  ],
+  "concepts": [
+    {
+      "name": "Short Interest Percentage of Float (SI%)",
+      "description": "The proportion of a company's freely tradable shares (float) that have been sold short. Pre-Palantir announcement RXT SI% was above 27%; post-squeeze it declined to 8.44%. Values above 20% are generally considered high and indicative of elevated squeeze potential."
+    },
+    {
+      "name": "Days-to-Cover (Short Ratio)",
+      "description": "The number of trading days it would theoretically take for all short sellers to cover their positions at the current average daily volume. RXT's days-to-cover is 5.09, but this is distorted by the abnormally high post-event volume inflating the denominator."
+    },
+    {
+      "name": "Cost-to-Borrow",
+      "description": "The annualized interest rate short sellers must pay to borrow shares. High short interest in a small-float stock typically produces elevated borrow costs (hard-to-borrow status). Real-time CTB for RXT post-squeeze was inaccessible from public sources."
+    },
+    {
+      "name": "Float Utilization",
+      "description": "The percentage of available float shares that have been borrowed and sold short. A metric that captures how fully the borrowable supply has been exhausted. Data was not available from accessible sources for RXT's current period."
+    },
+    {
+      "name": "Volume Multiple",
+      "description": "The ratio of current volume to historical average volume, used as an indicator of unusual trading activity. On February 18, RXT traded at 232x its prior 20-day average. On February 20, volume remained at ~41x average. On February 26, intraday volume was approximately 20x average."
+    },
+    {
+      "name": "RSI (Relative Strength Index)",
+      "description": "A momentum oscillator measuring the speed and change of price movements on a 0\u2013100 scale. Readings above 70 are overbought; below 30 are oversold. RXT RSI was 17.97 on February 18 (intraday washout) and 78.28 on February 20 (sharp recovery into overbought)."
+    },
+    {
+      "name": "ADX (Average Directional Index)",
+      "description": "Measures trend strength regardless of direction. Values above 25 indicate a strong trend; above 50 indicate a very strong trend. RXT ADX was above 54 on both February 18 and February 20, confirming the force of the directional move."
+    },
+    {
+      "name": "Palantir Foundry and AIP Partnership",
+      "description": "The catalyst event announced February 18, 2026, under which Rackspace will host, deploy, and manage Palantir's enterprise AI platforms in its private cloud infrastructure. The announcement coincided with the compression of an elevated short position in RXT, amplifying the price move."
+    },
+    {
+      "name": "Short Covering",
+      "description": "The process by which short sellers buy back shares to close their positions, typically at a loss when the price has risen. Forced or voluntary short covering into low liquidity amplifies upside price moves. The drop in RXT SI% from >27% to 8.44% implies significant covering occurred during the squeeze week."
+    }
+  ],
+  "tensions": [
+    "The 5.09 days-to-cover figure sounds elevated but is likely misleading: the denominator (average volume) has been inflated by extraordinary post-announcement trading. If volume normalizes toward pre-event levels (~1.6M shares/day), the effective days-to-cover at 9.13M shares short would be approximately 5,706 days \u2014 an extreme and equally unreliable number. Neither reading reflects stable conditions.",
+    "The 8.44% current SI% is near the peer group average (8.53%), suggesting the squeeze has brought RXT's short position back to a normal baseline. However, the stock remains heavily traded by retail participants who may be holding long positions expecting further appreciation, while institutional options traders were pricing in a steep decline by mid-May. These two investor bases hold conflicting near-term views.",
+    "The positive Q4 2025 earnings beat (EPS +$0.01 vs -$0.04 expected; revenue beat) introduces a genuine fundamental component to the rally, complicating the squeeze narrative: some of the post-February 18 gains may now reflect a real reassessment of business trajectory rather than purely mechanical short covering. Disentangling these two forces from price action alone is not possible with available data.",
+    "Raymond James had already downgraded RXT to Market Perform on June 2, 2025 (following Q1 2025 earnings), citing a 'longer path to improved growth and free cash flow' \u2014 this bearish stance predates the February 26 earnings event. RBC cut its price target from $2 (May 2025) to $1.75 (November 2025), with the current RBC PT standing at $1.75. This accumulated analyst skepticism conflicts with the stock's strong immediate market reaction (+27.43% premarket on February 26 earnings). The tension reflects the gap between short-term momentum and a medium-term fundamental concern that has been building for months.",
+    "The stock is down approximately 50% from its 52-week high of $3.03 even after the +265% surge, meaning it still carries substantial longer-term technical damage. The pre-announcement baseline was approximately $0.41, which implies the post-squeeze price of ~$1.41 represents roughly a 3.4x gain \u2014 but also that early 2026 buyers at higher prices remain deeply underwater."
+  ],
+  "open_questions": [
+    "What is the real-time cost-to-borrow rate for RXT shares? Pre-squeeze CTB at >27% SI would typically be in the 50\u2013200%+ APR range for such a small-float name. Post-squeeze CTB is likely declining but specific figures were inaccessible from public sources. Fintel and ORTEX provide this data behind paywalls.",
+    "What is the precise float size for RXT? Total shares outstanding are approximately 243.59 million, but the float (freely tradable shares) is smaller. The SI% of 8.44% of float versus ~3.7% of shares outstanding implies a float of roughly 108 million shares, but this figure requires confirmation from a direct data source.",
+    "Has new short interest been added post-squeeze at the higher price level? The next FINRA-mandated short interest reporting date will clarify whether shorts re-entered at post-squeeze prices or continued to cover. Elevated volume after February 18 could mask either behavior.",
+    "What is the current institutional ownership picture? If large holders are distributing into the volume surge, the supply overhang could accelerate a reversal. If institutions are accumulating, the floor may be more durable.",
+    "Are there any outstanding debt maturities or covenant considerations that could re-emerge as negative catalysts? The investigation scope excluded fundamental analysis, but Rackspace's debt load has historically been a source of negative pressure that could re-activate short interest.",
+    "How much of the 265% surge was mechanically driven by short covering versus genuine new long buying? Volume of 373M shares on a reported 9.13M-share short position implies that short covering alone could not account for the full volume \u2014 suggesting substantial long-side speculative buying also occurred."
+  ],
+  "sources": [
+    {
+      "title": "Looking Into Rackspace Technology Inc's Recent Short Interest \u2014 Benzinga, Feb 23 2026",
+      "url": "https://www.benzinga.com/insights/short-sellers/26/02/50778180/looking-into-rackspace-technology-incs-recent-short-interest"
+    },
+    {
+      "title": "Up 265% in the Past 5 Days, Is There Any More Upside Left for Rackspace Stock? \u2014 Yahoo Finance / Barchart, Feb 23 2026",
+      "url": "https://finance.yahoo.com/news/265-past-5-days-more-163243424.html"
+    },
+    {
+      "title": "RXT \u2014 Rackspace Technology, Inc. Stock \u2014 Short Interest, Short Squeeze, Borrow Rates \u2014 Fintel",
+      "url": "https://fintel.io/ss/us/rxt"
+    },
+    {
+      "title": "Rackspace Technology Reports Fourth Quarter and Full Year 2025 Results \u2014 GlobeNewswire, Feb 26 2026",
+      "url": "https://www.globenewswire.com/news-release/2026/02/26/3245518/0/en/Rackspace-Technology-Reports-Fourth-Quarter-and-Full-Year-2025-Results.html"
+    },
+    {
+      "title": "RXT Stock: Rackspace Technology (NASDAQ) $1.58 Intraday Feb 18 2026 \u2014 Palantir Tie-Up Boosts Outlook \u2014 Meyka",
+      "url": "https://meyka.com/blog/rxt-stock-rackspace-technology-nasdaq-158-intraday-feb-18-2026-palantir-tie-up-boosts-outlook-1802/"
+    },
+    {
+      "title": "RXT Stock: Rackspace (NASDAQ) $1.23 Before Feb 26 Earnings \u2014 Meyka, Feb 23 2026",
+      "url": "https://meyka.com/blog/rxt-stock-rackspace-nasdaq-123-before-feb-26-earnings-guidance-to-set-trend-2302/"
+    },
+    {
+      "title": "Short Interest in Rackspace Technology, Inc. (NASDAQ:RXT) Rises By 27.3% \u2014 Ticker Report",
+      "url": "https://www.tickerreport.com/banking-finance/13349021/short-interest-in-rackspace-technology-inc-nasdaqrxt-rises-by-27-3.html"
+    },
+    {
+      "title": "Rackspace Shares Skyrocket 50% on Palantir AI Partnership \u2014 FinancialContent / MarketMinute, Feb 20 2026",
+      "url": "https://markets.financialcontent.com/stocks/article/marketminute-2026-2-20-rackspace-shares-skyrocket-50-on-palantir-ai-partnership-a-new-era-for-managed-infrastructure"
+    },
+    {
+      "title": "Rackspace Technology Inc. Faces Financial Challenges Amid Market Fluctuations \u2014 StocksToTrade, Feb 25 2026",
+      "url": "https://stockstotrade.com/news/rackspace-technology-inc-rxt-news-2026_02_25/"
+    },
+    {
+      "title": "Rackspace Technology (RXT) Short Interest Ratio and Volume \u2014 MarketBeat",
+      "url": "https://www.marketbeat.com/stocks/NASDAQ/RXT/short-interest/"
+    },
+    {
+      "title": "Rackspace Technology, Inc. Common Stock (RXT) Short Interest \u2014 Nasdaq Official",
+      "url": "https://www.nasdaq.com/market-activity/stocks/rxt/short-interest"
+    },
+    {
+      "title": "Does Rackspace's New Role Hosting Palantir AI Platforms Change the Bull Case for RXT? \u2014 Yahoo Finance",
+      "url": "https://finance.yahoo.com/news/does-rackspace-role-hosting-palantir-061118188.html"
+    },
+    {
+      "title": "Rackspace Shares Surge Amid Palantir Partnership and Strategic Moves \u2014 StocksToTrade, Feb 26 2026",
+      "url": "https://stockstotrade.com/news/rackspace-technology-inc-rxt-news-2026_02_26/"
+    },
+    {
+      "title": "Rackspace Technology, Nasdaq:RXT \u2014 Short Interest \u2014 ORTEX",
+      "url": "https://app.ortex.com/s/Nasdaq/RXT/short-interest"
+    }
+  ],
+  "quick_reference": {
+    "title": "RXT Short Squeeze Metrics \u2014 As of February 26, 2026",
+    "columns": [
+      "Metric",
+      "Value",
+      "Status / Interpretation"
+    ],
+    "rows": [
+      [
+        "Short Interest % of Float (current)",
+        "8.44%",
+        "Post-squeeze normalized; down from >27% pre-Feb 18"
+      ],
+      [
+        "Shares Short (current)",
+        "9.13M",
+        "Significant covering from pre-squeeze level already occurred"
+      ],
+      [
+        "Short Interest % Change (latest report)",
+        "+27.3% vs prior period",
+        "Rising again from post-squeeze low; bears re-entering"
+      ],
+      [
+        "Days-to-Cover",
+        "5.09 days",
+        "Distorted by abnormal post-event volume; treat with caution"
+      ],
+      [
+        "Cost-to-Borrow",
+        "Not retrievable",
+        "Likely declining from hard-to-borrow pre-squeeze levels"
+      ],
+      [
+        "Float Utilization",
+        "Not retrievable",
+        "Estimated float ~108M shares based on outstanding vs SI%"
+      ],
+      [
+        "Pre-Squeeze SI%",
+        ">27%",
+        "Confirmed catalyst for the primary squeeze event"
+      ],
+      [
+        "Peak Volume (Feb 18)",
+        "373.3M shares (~232x avg)",
+        "Extreme; signals forced short covering + speculative buying"
+      ],
+      [
+        "Volume (Feb 20)",
+        "~66.5M shares (~41x avg)",
+        "Elevated but normalizing"
+      ],
+      [
+        "Volume (Feb 26 intraday)",
+        "~20.5M shares (~13x avg)",
+        "Continuing deceleration"
+      ],
+      [
+        "RSI (Feb 18 intraday)",
+        "17.97",
+        "Oversold intraday washout during volatile surge day"
+      ],
+      [
+        "RSI (Feb 20)",
+        "78.28",
+        "Overbought; stock had rebounded sharply from intraday low"
+      ],
+      [
+        "ADX (Feb 18 / Feb 20)",
+        "54.04 / 56.06",
+        "Very strong directional trend confirmed on both dates"
+      ],
+      [
+        "Price vs 50-day MA",
+        "$1.41 vs $0.86",
+        "Price ~64% above 50-day MA \u2014 extended"
+      ],
+      [
+        "Price vs 200-day MA",
+        "$1.41 vs $1.21",
+        "Price ~17% above 200-day MA"
+      ],
+      [
+        "52-week Range",
+        "$0.393 \u2013 $3.03",
+        "Current price near mid-range post-surge"
+      ],
+      [
+        "Earnings Beat (Q4 2025)",
+        "EPS -$0.01 vs -$0.04 est.",
+        "75% positive surprise; stock +27.43% premarket on Feb 26"
+      ],
+      [
+        "Squeeze Phase Assessment",
+        "Primary squeeze COMPLETED",
+        "Measured conditions indicate post-squeeze decompression phase"
+      ]
+    ],
+    "notes": "The primary squeeze event ran Feb 18\u201323, 2026. Short interest has compressed from >27% to 8.44% of float, indicating most forced covering is complete. The Feb 26 earnings beat adds a new catalyst layer but does not recreate pre-squeeze conditions. Days-to-cover (5.09) is inflated-denominator distorted and should not be used as a standalone squeeze signal. Cost-to-borrow and float utilization data were not publicly accessible in real time."
+  }
+}

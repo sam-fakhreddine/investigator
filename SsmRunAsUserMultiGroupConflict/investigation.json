@@ -1,44 +1,80 @@
 {
-  "topic": "SSM RunAs Sync Pipeline — Entra ID, IAM Identity Center, and LZA",
+  "topic": "SSM RunAs Sync Pipeline \u2014 Entra ID, IAM Identity Center, and LZA",
   "date": "2026-02-27",
-  "status": "complete",
-  "question": "How do organizations using AWS Landing Zone Accelerator, IAM Identity Center federated via Microsoft Entra ID / Azure AD, and SSM Session Manager resolve the SSMSessionRunAs multi-group conflict — and how can the full pipeline (Entra ID attribute sourcing, IAM Identity Center ABAC configuration, and per-account SSM preferences) be kept in sync across a multi-account organization?",
-  "context": "Organizations using AWS Landing Zone Accelerator (LZA) to manage a multi-account AWS organization, federated through IAM Identity Center (IdC) via Microsoft Entra ID / Azure AD, rely on SSM Session Manager for server access and require Session Manager's RunAs feature to authenticate engineers as named OS users on managed EC2 instances. The SSMSessionRunAs session tag — which drives that OS username selection — depends on a three-layer pipeline: attribute sourcing in Entra ID, ABAC mapping in IAM Identity Center, and per-account SSM preferences in each member account. Engineers encounter session failures or incorrect user assignment when any of these layers is misconfigured, when an engineer belongs to multiple Entra groups with conflicting attribute emissions, or when the SSM-SessionManagerRunShell document is absent or inconsistent across accounts. Understanding this pipeline requires looking at all three layers simultaneously because LZA manages some of them declaratively, leaves others entirely outside its scope, and preserves but does not enforce RunAs values in the SSM preferences document.",
+  "status": "Complete",
+  "question": "How do organizations using AWS Landing Zone Accelerator, IAM Identity Center federated via Microsoft Entra ID / Azure AD, and SSM Session Manager resolve the SSMSessionRunAs multi-group conflict \u2014 and how can the full pipeline (Entra ID attribute sourcing, IAM Identity Center ABAC configuration, and per-account SSM preferences) be kept in sync across a multi-account organization?",
+  "context": "Organizations using AWS Landing Zone Accelerator (LZA) to manage a multi-account AWS organization, federated through IAM Identity Center (IdC) via Microsoft Entra ID / Azure AD, rely on SSM Session Manager for server access and require Session Manager's RunAs feature to authenticate engineers as named OS users on managed EC2 instances. The SSMSessionRunAs session tag \u2014 which drives that OS username selection \u2014 depends on a three-layer pipeline: attribute sourcing in Entra ID, ABAC mapping in IAM Identity Center, and per-account SSM preferences in each member account. Engineers encounter session failures or incorrect user assignment when any of these layers is misconfigured, when an engineer belongs to multiple Entra groups with conflicting attribute emissions, or when the SSM-SessionManagerRunShell document is absent or inconsistent across accounts. Understanding this pipeline requires looking at all three layers simultaneously because LZA manages some of them declaratively, leaves others entirely outside its scope, and preserves but does not enforce RunAs values in the SSM preferences document.",
   "quick_reference": {
     "title": "Full Pipeline: Ownership and Sync Mechanism by Layer",
-    "columns": ["Layer", "What It Controls", "LZA-Managed?", "Correct Tool / Mechanism", "Key Constraint"],
+    "columns": [
+      "Layer",
+      "What It Controls",
+      "LZA-Managed?",
+      "Correct Tool / Mechanism",
+      "Key Constraint"
+    ],
     "rows": [
-      ["Entra ID attribute sourcing for SSMSessionRunAs", "Which attribute value is emitted per user in the SAML assertion or synced via SCIM", "No", "Entra ID user object (custom extension attribute or sAMAccountName) + SCIM sync to IdC identity store", "Must be a per-user attribute — group-derived values cause multi-group collision and hard rejection by IdC ABAC"],
-      ["IAM Identity Center ABAC attribute configuration", "Mapping of user-profile attributes to IAM session tags (aws:PrincipalTag) via InstanceAccessControlAttributeConfiguration", "No — confirmed gap", "Console, aws ssoadmin CLI, CloudFormation AWS::SSO::InstanceAccessControlAttributeConfiguration, or Terraform aws_ssoadmin_instance_access_control_attributes", "LZA identityCenter block has no key for this resource; it must be owned by a supplemental IaC tool or the IdC console"],
-      ["Permission sets and assignments", "Which IAM policies users receive; which accounts they can access", "Yes — via identityCenter block in iam-config.yaml", "LZA identityCenterPermissionSets and identityCenterAssignments", "OU-scoped assignments cover direct children only (GitHub #220); management account assignment failures in v1.7.0+ (GitHub #215, #496)"],
-      ["SSM-SessionManagerRunShell per account", "runAsEnabled and runAsDefaultUser in each member account's SSM preferences document", "Partially — LZA preserves but does not write RunAs fields", "cloudFormationStackSets in customizations-config.yaml, targeting Root OU with auto-deployment enabled, carrying a Lambda custom resource that calls ssm:UpdateDocument", "LZA ssmAutomation shares document references only — it does not deploy a local copy; SSM-SessionManagerRunShell must be locally owned per account"],
-      ["SCP guardrail for SSM document immutability", "Prevents member account admins from modifying SSM-SessionManagerRunShell after deployment", "No — must be added separately", "SCP denying ssm:UpdateDocument, ssm:CreateDocument, ssm:DeleteDocument on SSM-SessionManagerRunShell resource, applied at Root OU or relevant member OUs", "SCP must exempt the StackSet service role and LZA pipeline role or the enforcement mechanism will block its own writes"]
+      [
+        "Entra ID attribute sourcing for SSMSessionRunAs",
+        "Which attribute value is emitted per user in the SAML assertion or synced via SCIM",
+        "No",
+        "Entra ID user object (custom extension attribute or sAMAccountName) + SCIM sync to IdC identity store",
+        "Must be a per-user attribute \u2014 group-derived values cause multi-group collision and hard rejection by IdC ABAC"
+      ],
+      [
+        "IAM Identity Center ABAC attribute configuration",
+        "Mapping of user-profile attributes to IAM session tags (aws:PrincipalTag) via InstanceAccessControlAttributeConfiguration",
+        "No \u2014 confirmed gap",
+        "Console, aws ssoadmin CLI, CloudFormation AWS::SSO::InstanceAccessControlAttributeConfiguration, or Terraform aws_ssoadmin_instance_access_control_attributes",
+        "LZA identityCenter block has no key for this resource; it must be owned by a supplemental IaC tool or the IdC console"
+      ],
+      [
+        "Permission sets and assignments",
+        "Which IAM policies users receive; which accounts they can access",
+        "Yes \u2014 via identityCenter block in iam-config.yaml",
+        "LZA identityCenterPermissionSets and identityCenterAssignments",
+        "OU-scoped assignments cover direct children only (GitHub #220); management account assignment failures in v1.7.0+ (GitHub #215, #496)"
+      ],
+      [
+        "SSM-SessionManagerRunShell per account",
+        "runAsEnabled and runAsDefaultUser in each member account's SSM preferences document",
+        "Partially \u2014 LZA preserves but does not write RunAs fields",
+        "cloudFormationStackSets in customizations-config.yaml, targeting Root OU with auto-deployment enabled, carrying a Lambda custom resource that calls ssm:UpdateDocument",
+        "LZA ssmAutomation shares document references only \u2014 it does not deploy a local copy; SSM-SessionManagerRunShell must be locally owned per account"
+      ],
+      [
+        "SCP guardrail for SSM document immutability",
+        "Prevents member account admins from modifying SSM-SessionManagerRunShell after deployment",
+        "No \u2014 must be added separately",
+        "SCP denying ssm:UpdateDocument, ssm:CreateDocument, ssm:DeleteDocument on SSM-SessionManagerRunShell resource, applied at Root OU or relevant member OUs",
+        "SCP must exempt the StackSet service role and LZA pipeline role or the enforcement mechanism will block its own writes"
+      ]
     ],
     "notes": "Two tools are required for this pipeline: LZA (for permission sets and assignments) and a supplemental IaC tool or the IdC console (for ABAC attribute configuration). LZA alone cannot configure the full pipeline."
   },
   "key_findings": [
-    "The root cause of SSMSessionRunAs multi-group conflict is a category error: when SSMSessionRunAs is sourced from Entra group membership, a user belonging to more than one qualifying group causes IAM Identity Center to hard-reject the SAML assertion — not silently select one value. This is a documented IdC ABAC behavior, not an STS-level issue. The fix is architectural, not operational.",
-    "AWSReservedSSO_ roles — the IAM roles IdC creates per-permission-set per-account — cannot be tagged by customers. AWS blocks modification with an explicit 'protected role' error. The only path to pass SSMSessionRunAs for IdC-federated users is as a session tag via SAML assertion or ABAC user-profile attribute.",
-    "The correct architecture sources SSMSessionRunAs from a per-user attribute in the Entra ID identity store — such as sAMAccountName or a custom extension attribute — synced to the IAM Identity Center identity store via SCIM. This value is constant across all of a user's permission-set selections and is immune to group-collision.",
+    "The root cause of SSMSessionRunAs multi-group conflict is a category error: when SSMSessionRunAs is sourced from Entra group membership, a user belonging to more than one qualifying group causes IAM Identity Center to hard-reject the SAML assertion \u2014 not silently select one value. This is a documented IdC ABAC behavior, not an STS-level issue. The fix is architectural, not operational.",
+    "AWSReservedSSO_ roles \u2014 the IAM roles IdC creates per-permission-set per-account \u2014 cannot be tagged by customers. AWS blocks modification with an explicit 'protected role' error. The only path to pass SSMSessionRunAs for IdC-federated users is as a session tag via SAML assertion or ABAC user-profile attribute.",
+    "The correct architecture sources SSMSessionRunAs from a per-user attribute in the Entra ID identity store \u2014 such as sAMAccountName or a custom extension attribute \u2014 synced to the IAM Identity Center identity store via SCIM. This value is constant across all of a user's permission-set selections and is immune to group-collision.",
     "LZA has no configuration surface for IAM Identity Center's Attributes for Access Control (InstanceAccessControlAttributeConfiguration). This is the instance-level API that maps user-profile attributes to IAM session tags. It is a confirmed gap across all documented LZA versions (v1.3.x through v1.10.x+) and must be managed via the IdC console, the aws ssoadmin CLI, CloudFormation AWS::SSO::InstanceAccessControlAttributeConfiguration, or Terraform aws_ssoadmin_instance_access_control_attributes.",
-    "LZA explicitly preserves existing runAsEnabled and runAsDefaultUser values when it updates SSM-SessionManagerRunShell (e.g., for logging changes) — it does not overwrite them. This prevents pipeline regression but also means LZA can never be the enforcement agent for RunAs values. RunAs content must be written by a separate mechanism.",
-    "The StackSet + Lambda pattern — as demonstrated by the AWS Security Blog post 'How to automate Session Manager preferences across your organization' (November 2025) and its companion sample (aws-samples/sample-how-to-automate-session-manager-preferences) — is the correct approach for org-wide SSM RunAs configuration. However, LZA's cloudFormationStackSets in customizations-config.yaml creates SELF_MANAGED StackSets only: the CloudFormationStackSetConfig interface exposes no permissionModel or autoDeployment property (GitHub issues #810 and #666 are open feature requests as of v1.14.x). To use SERVICE_MANAGED permissions — required for auto-deployment to new accounts via Organizations lifecycle events — the StackSet must be deployed outside LZA's customizations pipeline, via a standalone CloudFormation template, Terraform, or a separate automation layer.",
-    "LZA's ssmAutomation section in security-config.yaml creates SSM documents in the Audit account and shares them via ModifyDocumentPermission. This is a document-sharing mechanism, not deployment: the document remains Audit-account-owned and is referenced — not copied — by member accounts. SSM-SessionManagerRunShell must be locally owned per account and cannot be satisfied by a cross-account share.",
-    "CloudFormation SERVICE_MANAGED StackSets with auto-deployment enabled do trigger stack instance creation from Organizations lifecycle events when an account joins a targeted OU — this is the correct mechanism for closing the new-account gap without requiring a pipeline run. However, this capability is NOT available through LZA's cloudFormationStackSets in customizations-config.yaml, which creates SELF_MANAGED StackSets only (the CloudFormationStackSetConfig interface has no permissionModel or autoDeployment property; GitHub issues #810 and #666 are open feature requests as of v1.14.x). The auto-deployment pattern therefore requires the StackSet to be deployed outside LZA's customizations pipeline.",
+    "LZA explicitly preserves existing runAsEnabled and runAsDefaultUser values when it updates SSM-SessionManagerRunShell (e.g., for logging changes) \u2014 it does not overwrite them. This prevents pipeline regression but also means LZA can never be the enforcement agent for RunAs values. RunAs content must be written by a separate mechanism.",
+    "The StackSet + Lambda pattern \u2014 as demonstrated by the AWS Security Blog post 'How to automate Session Manager preferences across your organization' (November 2025) and its companion sample (aws-samples/sample-how-to-automate-session-manager-preferences) \u2014 is the correct approach for org-wide SSM RunAs configuration. However, LZA's cloudFormationStackSets in customizations-config.yaml creates SELF_MANAGED StackSets only: the CloudFormationStackSetConfig interface exposes no permissionModel or autoDeployment property (GitHub issues #810 and #666 are open feature requests as of v1.14.x). To use SERVICE_MANAGED permissions \u2014 required for auto-deployment to new accounts via Organizations lifecycle events \u2014 the StackSet must be deployed outside LZA's customizations pipeline, via a standalone CloudFormation template, Terraform, or a separate automation layer.",
+    "LZA's ssmAutomation section in security-config.yaml creates SSM documents in the Audit account and shares them via ModifyDocumentPermission. This is a document-sharing mechanism, not deployment: the document remains Audit-account-owned and is referenced \u2014 not copied \u2014 by member accounts. SSM-SessionManagerRunShell must be locally owned per account and cannot be satisfied by a cross-account share.",
+    "CloudFormation SERVICE_MANAGED StackSets with auto-deployment enabled do trigger stack instance creation from Organizations lifecycle events when an account joins a targeted OU \u2014 this is the correct mechanism for closing the new-account gap without requiring a pipeline run. However, this capability is NOT available through LZA's cloudFormationStackSets in customizations-config.yaml, which creates SELF_MANAGED StackSets only (the CloudFormationStackSetConfig interface has no permissionModel or autoDeployment property; GitHub issues #810 and #666 are open feature requests as of v1.14.x). The auto-deployment pattern therefore requires the StackSet to be deployed outside LZA's customizations pipeline.",
     "An SCP denying ssm:UpdateDocument, ssm:CreateDocument, and ssm:DeleteDocument on the SSM-SessionManagerRunShell resource must be applied org-wide to prevent member account administrators from modifying the preferences document after the StackSet configures it. The SCP must explicitly exempt the StackSet service role (AWSServiceRoleForCloudFormationStackSetsOrgAdmin) and the LZA pipeline role, or the enforcement mechanism will block its own writes.",
-    "SCIM-synchronized attributes take precedence over SAML assertion values for the same attribute key in IdC ABAC evaluation — confirmed by AWS documentation. Console-configured attributes (via InstanceAccessControlAttributeConfiguration) also override SAML assertion values. The relative ordering between console-configured attributes and SCIM-synchronized attributes when both specify the same key is not documented by AWS and cannot be determined from documentation alone.",
-    "OU-scoped identityCenterAssignments in LZA apply only to direct child accounts of the specified OU — nested child OUs are silently excluded (GitHub issue #220). Management account assignments have a documented history of failure in LZA v1.7.0 and later (GitHub issues #215 and #496); operators must verify current behavior against their deployed LZA version.",
-    "Active IAM role sessions are not immediately invalidated when LZA updates a permission set and calls ProvisionPermissionSet. Temporary credentials issued before a policy change remain valid until the session duration on the permission set expires — up to 12 hours. Updated permissions take effect only on new sessions.",
-    "When organizations insist on group-derived RunAs values, the only viable IdP-side design is mutually exclusive Entra groups with claim transformation rules that emit a single, non-duplicated SSMSessionRunAs attribute — enforced by making groups disjoint at the application assignment level in Entra ID. This introduces operational overhead to maintain group disjointness as a provisioning invariant."
+    "SCIM-synchronized attributes take precedence over SAML assertion values for the same attribute key in IdC ABAC evaluation \u2014 confirmed by AWS documentation. Console-configured attributes (via InstanceAccessControlAttributeConfiguration) also override SAML assertion values. The relative ordering between console-configured attributes and SCIM-synchronized attributes when both specify the same key is not documented by AWS and cannot be determined from documentation alone.",
+    "OU-scoped identityCenterAssignments in LZA apply only to direct child accounts of the specified OU \u2014 nested child OUs are silently excluded (GitHub issue #220). Management account assignments have a documented history of failure in LZA v1.7.0 and later (GitHub issues #215 and #496); operators must verify current behavior against their deployed LZA version.",
+    "Active IAM role sessions are not immediately invalidated when LZA updates a permission set and calls ProvisionPermissionSet. Temporary credentials issued before a policy change remain valid until the session duration on the permission set expires \u2014 up to 12 hours. Updated permissions take effect only on new sessions.",
+    "When organizations insist on group-derived RunAs values, the only viable IdP-side design is mutually exclusive Entra groups with claim transformation rules that emit a single, non-duplicated SSMSessionRunAs attribute \u2014 enforced by making groups disjoint at the application assignment level in Entra ID. This introduces operational overhead to maintain group disjointness as a provisioning invariant."
   ],
   "concepts": [
     {
       "name": "SSMSessionRunAs",
-      "description": "An IAM session tag key recognized by AWS Systems Manager Session Manager. When present on the calling principal's session, Session Manager uses the tag's value as the OS username for the shell session on the managed node. Checked before the account-level default (runAsDefaultUser). Cannot be multi-valued. Must originate from a per-user ABAC attribute — not group membership — for IdC-federated users in multi-group scenarios."
+      "description": "An IAM session tag key recognized by AWS Systems Manager Session Manager. When present on the calling principal's session, Session Manager uses the tag's value as the OS username for the shell session on the managed node. Checked before the account-level default (runAsDefaultUser). Cannot be multi-valued. Must originate from a per-user ABAC attribute \u2014 not group membership \u2014 for IdC-federated users in multi-group scenarios."
     },
     {
       "name": "RunAs (Session Manager)",
-      "description": "A Session Manager feature that starts a session as a specified OS user rather than the default ssm-user account. Controlled via the SSMSessionRunAs principal tag (highest priority) or the runAsDefaultUser field in the SSM-SessionManagerRunShell account-level preferences document (fallback). Once enabled, failure to resolve a valid OS user causes session failure — there is no further fallback to ssm-user."
+      "description": "A Session Manager feature that starts a session as a specified OS user rather than the default ssm-user account. Controlled via the SSMSessionRunAs principal tag (highest priority) or the runAsDefaultUser field in the SSM-SessionManagerRunShell account-level preferences document (fallback). Once enabled, failure to resolve a valid OS user causes session failure \u2014 there is no further fallback to ssm-user."
     },
     {
       "name": "IAM Identity Center (IdC)",
@@ -46,11 +82,11 @@
     },
     {
       "name": "ABAC (Attributes for Access Control)",
-      "description": "The IAM Identity Center instance-level configuration that maps user-profile attributes to IAM session tags (aws:PrincipalTag) during federation. Configured via the CreateInstanceAccessControlAttributeConfiguration API. Not managed by LZA in any version — must be configured via the IdC console, aws ssoadmin CLI, CloudFormation AWS::SSO::InstanceAccessControlAttributeConfiguration, or Terraform aws_ssoadmin_instance_access_control_attributes."
+      "description": "The IAM Identity Center instance-level configuration that maps user-profile attributes to IAM session tags (aws:PrincipalTag) during federation. Configured via the CreateInstanceAccessControlAttributeConfiguration API. Not managed by LZA in any version \u2014 must be configured via the IdC console, aws ssoadmin CLI, CloudFormation AWS::SSO::InstanceAccessControlAttributeConfiguration, or Terraform aws_ssoadmin_instance_access_control_attributes."
     },
     {
       "name": "AWSReservedSSO_ role",
-      "description": "An IAM role automatically created and managed by IAM Identity Center in each member account for each permission-set-to-account assignment. These roles are protected — customers cannot tag or modify them directly. The SSMSessionRunAs session tag must be passed via SAML or ABAC, not via a static role tag."
+      "description": "An IAM role automatically created and managed by IAM Identity Center in each member account for each permission-set-to-account assignment. These roles are protected \u2014 customers cannot tag or modify them directly. The SSMSessionRunAs session tag must be passed via SAML or ABAC, not via a static role tag."
     },
     {
       "name": "LZA customizations-config.yaml",
@@ -58,7 +94,7 @@
     },
     {
       "name": "cloudFormationStackSets (LZA)",
-      "description": "An LZA customizations-config resource type that deploys a CloudFormation StackSet with service-managed permissions to target OUs or Root. Supports auto-deployment, which automatically creates stack instances in new member accounts when they join a target OU — without requiring an LZA pipeline run. The correct LZA-native mechanism for org-wide SSM-SessionManagerRunShell RunAs enforcement."
+      "description": "An LZA customizations-config resource type that deploys a CloudFormation StackSet with service-managed permissions to target OUs or Root. Supports auto-deployment, which automatically creates stack instances in new member accounts when they join a target OU \u2014 without requiring an LZA pipeline run. The correct LZA-native mechanism for org-wide SSM-SessionManagerRunShell RunAs enforcement."
     },
     {
       "name": "StackSet Auto-Deployment",
@@ -82,13 +118,13 @@
     }
   ],
   "tensions": [
-    "Using group membership to drive SSMSessionRunAs creates a permission-set-centric architecture that appears intuitive but causes a hard sign-in rejection the moment a user belongs to more than one qualifying group. IAM Identity Center enforces this at the ABAC layer — there is no soft failure, no fallback, and no AWS-native mechanism to auto-resolve the collision.",
-    "LZA's preserve behavior for runAsEnabled and runAsDefaultUser protects customer-configured values from pipeline regression, but it is the same mechanism that prevents LZA from ever being the enforcement agent for RunAs values. The correct delivery path — a StackSet via customizations-config.yaml — operates in the CUSTOMIZATIONS stage and must co-exist with LZA's logging updates to the same SSM-SessionManagerRunShell document without conflict.",
-    "LZA's identityCenter block provides strong declarative control over permission set content and assignment topology but has a confirmed gap at the ABAC layer. Organizations that want full IaC coverage must use a supplemental tool (Terraform, CloudFormation) specifically for InstanceAccessControlAttributeConfiguration — creating a split-ownership model that requires coordination to prevent drift between the LZA config repo and the supplemental IaC stack.",
-    "SCIM-synchronized attributes and console-configured ABAC attributes both override SAML assertion values in IdC ABAC evaluation. Teams running both SAML claim transformation rules and SCIM sync may silently suppress intentional per-session attribute overrides without a clear error — and cannot determine from AWS documentation which of those two sources (console-configured vs. SCIM) takes precedence when both specify the same key.",
-    "OU-scoped assignment behavior (direct children only, not nested) creates a tension between configuration simplicity and accuracy. An operator who scopes an identityCenterAssignment to a parent OU may believe it covers all descendant accounts, but accounts in nested OUs are silently excluded until they are explicitly listed — a correctness gap that grows as the account hierarchy deepens.",
+    "Using group membership to drive SSMSessionRunAs creates a permission-set-centric architecture that appears intuitive but causes a hard sign-in rejection the moment a user belongs to more than one qualifying group. IAM Identity Center enforces this at the ABAC layer \u2014 there is no soft failure, no fallback, and no AWS-native mechanism to auto-resolve the collision.",
+    "LZA's preserve behavior for runAsEnabled and runAsDefaultUser protects customer-configured values from pipeline regression, but it is the same mechanism that prevents LZA from ever being the enforcement agent for RunAs values. The correct delivery path \u2014 a StackSet via customizations-config.yaml \u2014 operates in the CUSTOMIZATIONS stage and must co-exist with LZA's logging updates to the same SSM-SessionManagerRunShell document without conflict.",
+    "LZA's identityCenter block provides strong declarative control over permission set content and assignment topology but has a confirmed gap at the ABAC layer. Organizations that want full IaC coverage must use a supplemental tool (Terraform, CloudFormation) specifically for InstanceAccessControlAttributeConfiguration \u2014 creating a split-ownership model that requires coordination to prevent drift between the LZA config repo and the supplemental IaC stack.",
+    "SCIM-synchronized attributes and console-configured ABAC attributes both override SAML assertion values in IdC ABAC evaluation. Teams running both SAML claim transformation rules and SCIM sync may silently suppress intentional per-session attribute overrides without a clear error \u2014 and cannot determine from AWS documentation which of those two sources (console-configured vs. SCIM) takes precedence when both specify the same key.",
+    "OU-scoped assignment behavior (direct children only, not nested) creates a tension between configuration simplicity and accuracy. An operator who scopes an identityCenterAssignment to a parent OU may believe it covers all descendant accounts, but accounts in nested OUs are silently excluded until they are explicitly listed \u2014 a correctness gap that grows as the account hierarchy deepens.",
     "An SCP denying ssm:UpdateDocument on SSM-SessionManagerRunShell makes the document immutable for member account administrators, which is the desired guardrail posture. However, the LZA pipeline and the StackSet service role must be explicitly exempted from the SCP, or the enforcement mechanism will block its own writes. The SCP exception list becomes a dependency that must be maintained across LZA version upgrades and pipeline role name changes.",
-    "The new-account gap (PREPARE stage to CUSTOMIZATIONS stage) can be closed by StackSet auto-deployment via Organizations lifecycle events — but this depends on the StackSet already existing in the organization. If the StackSet itself is delivered by LZA's CUSTOMIZATIONS stage and the initial pipeline run has not yet completed in a new region, the auto-deployment mechanism does not yet exist to trigger."
+    "The new-account gap (PREPARE stage to CUSTOMIZATIONS stage) can be closed by StackSet auto-deployment via Organizations lifecycle events \u2014 but this depends on the StackSet already existing in the organization. If the StackSet itself is delivered by LZA's CUSTOMIZATIONS stage and the initial pipeline run has not yet completed in a new region, the auto-deployment mechanism does not yet exist to trigger."
   ],
   "open_questions": [
     "What is the confirmed precedence between console-configured ABAC attributes (InstanceAccessControlAttributeConfiguration) and SCIM-synchronized attributes when both specify the same key for a given user in IAM Identity Center? AWS documentation confirms each independently overrides SAML assertions but does not document their relative ordering. Teams using both cannot predict the effective SSMSessionRunAs value from documentation alone.",
@@ -96,196 +132,196 @@
     "Does LZA's preserve behavior for runAsEnabled and runAsDefaultUser apply when LZA creates SSM-SessionManagerRunShell for the first time in a new account (where the document does not yet exist), or only when updating an existing document? If LZA creates the document with default values before the StackSet runs, what is the resulting document version state?",
     "What is the current behavior of LZA management account assignments in the latest release (v1.14.x)? GitHub issues #215 and #496 indicate failures introduced in v1.7.0 were partially addressed, but it is unclear whether the fix is complete for all partition types.",
     "Does the SCP deny pattern for ssm:UpdateDocument on SSM-SessionManagerRunShell need to explicitly exempt AWSServiceRoleForCloudFormationStackSetsOrgAdmin, or does StackSet service-managed deployment assume a member-account role that falls outside SCP scope by default?",
-    "Is there a CloudTrail event or identity-store API that exposes which ABAC attribute values a given user will receive at session initiation time — without actually starting a session — so that attribute misconfiguration can be detected proactively?",
+    "Is there a CloudTrail event or identity-store API that exposes which ABAC attribute values a given user will receive at session initiation time \u2014 without actually starting a session \u2014 so that attribute misconfiguration can be detected proactively?",
     "For organizations that want per-permission-set OS users (e.g., dev-role maps to devuser, prod-role maps to produser), is the only supported path mutually exclusive Entra groups with disjoint claim transformation rules, or is there an IdC-native mechanism to override ABAC attributes per permission set without touching the Entra ID configuration?"
   ],
   "sources": [
     {
-      "title": "Turn on Run As support for Linux and macOS managed nodes — AWS Systems Manager",
+      "title": "Turn on Run As support for Linux and macOS managed nodes \u2014 AWS Systems Manager",
       "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-configure-preferences.html"
     },
     {
-      "title": "Configure AWS IAM Identity Center ABAC for EC2 instances and Systems Manager Session Manager — AWS Security Blog",
+      "title": "Configure AWS IAM Identity Center ABAC for EC2 instances and Systems Manager Session Manager \u2014 AWS Security Blog",
       "url": "https://aws.amazon.com/blogs/security/configure-aws-sso-abac-for-ec2-instances-and-systems-manager-session-manager/"
     },
     {
-      "title": "Configuring AWS Systems Manager Session Manager run as support for federated users using session tags — AWS Cloud Operations Blog",
+      "title": "Configuring AWS Systems Manager Session Manager run as support for federated users using session tags \u2014 AWS Cloud Operations Blog",
       "url": "https://aws.amazon.com/blogs/mt/configuring-aws-systems-manager-session-manager-support-federated-users-using-session-tags/"
     },
     {
-      "title": "Configure Session Manager access for federated users using SAML session tags — AWS Cloud Operations Blog",
+      "title": "Configure Session Manager access for federated users using SAML session tags \u2014 AWS Cloud Operations Blog",
       "url": "https://aws.amazon.com/blogs/mt/configure-session-manager-access-for-federated-users-using-saml-session-tags/"
     },
     {
-      "title": "Pass session tags in AWS STS — AWS IAM User Guide",
+      "title": "Pass session tags in AWS STS \u2014 AWS IAM User Guide",
       "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html"
     },
     {
-      "title": "Attribute-based access control — AWS IAM Identity Center",
+      "title": "Attribute-based access control \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac.html"
     },
     {
-      "title": "Attributes for access control — AWS IAM Identity Center",
+      "title": "Attributes for access control \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/attributesforaccesscontrol.html"
     },
     {
-      "title": "Enable and configure attributes for access control — AWS IAM Identity Center",
+      "title": "Enable and configure attributes for access control \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/configure-abac.html"
     },
     {
-      "title": "Troubleshooting IAM Identity Center issues — AWS IAM Identity Center",
+      "title": "Troubleshooting IAM Identity Center issues \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/troubleshooting.html"
     },
     {
-      "title": "Manage AWS accounts with permission sets — AWS IAM Identity Center",
+      "title": "Manage AWS accounts with permission sets \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsetsconcept.html"
     },
     {
-      "title": "Create, manage, and delete permission sets — AWS IAM Identity Center",
+      "title": "Create, manage, and delete permission sets \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsets.html"
     },
     {
-      "title": "Use custom attributes for ABAC with Microsoft Entra ID and AWS IAM Identity Center — AWS Blog",
+      "title": "Use custom attributes for ABAC with Microsoft Entra ID and AWS IAM Identity Center \u2014 AWS Blog",
       "url": "https://aws.amazon.com/blogs/modernizing-with-aws/use-custom-attributes-for-attribute-based-access-control-abac-with-microsoft-entra-id-and-aws-iam-identity-center/"
     },
     {
-      "title": "Configure SAML and SCIM with Microsoft Entra ID and IAM Identity Center — AWS IAM Identity Center",
+      "title": "Configure SAML and SCIM with Microsoft Entra ID and IAM Identity Center \u2014 AWS IAM Identity Center",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/idp-microsoft-entra.html"
     },
     {
-      "title": "Resolve the IAM error Cannot perform the operation on the protected role AWSReservedSSO — AWS re:Post",
+      "title": "Resolve the IAM error Cannot perform the operation on the protected role AWSReservedSSO \u2014 AWS re:Post",
       "url": "https://repost.aws/knowledge-center/identity-center-aws-reserved-sso"
     },
     {
-      "title": "Tagging a AWSReservedSSO role with SSMSessionRunAs — AWS re:Post community question",
+      "title": "Tagging a AWSReservedSSO role with SSMSessionRunAs \u2014 AWS re:Post community question",
       "url": "https://repost.aws/questions/QUthZTIlIpTlSkGEyGFX8ELw/tagging-a-awsreservedsso-role-wit-ssmsessionrunas"
     },
     {
-      "title": "AWS SSO and SSMSessionRunAs session tag — Hatem Mahmoud's blog",
+      "title": "AWS SSO and SSMSessionRunAs session tag \u2014 Hatem Mahmoud's blog",
       "url": "https://mahmoudhatem.wordpress.com/2020/12/17/aws-sso-and-ssmsessionrunas-session-tag/"
     },
     {
-      "title": "ABAC with IAM Identity Center and Entra — best approaches? — AWS re:Post community question",
+      "title": "ABAC with IAM Identity Center and Entra \u2014 best approaches? \u2014 AWS re:Post community question",
       "url": "https://repost.aws/questions/QUJ8DegzWMReWS_3PvD6vgKQ/abac-with-iam-identity-center-and-entra-best-approach-s"
     },
     {
-      "title": "Configure group claims for applications using Microsoft Entra ID — Microsoft Learn",
+      "title": "Configure group claims for applications using Microsoft Entra ID \u2014 Microsoft Learn",
       "url": "https://learn.microsoft.com/en-us/entra/identity/hybrid/connect/how-to-connect-fed-group-claims"
     },
     {
-      "title": "AssumeRoleWithSAML — AWS STS API Reference",
+      "title": "AssumeRoleWithSAML \u2014 AWS STS API Reference",
       "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithSAML.html"
     },
     {
-      "title": "Session document schema — AWS Systems Manager",
+      "title": "Session document schema \u2014 AWS Systems Manager",
       "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-schema.html"
     },
     {
-      "title": "How to automate Session Manager preferences across your organization — AWS Security Blog (November 2025)",
+      "title": "How to automate Session Manager preferences across your organization \u2014 AWS Security Blog (November 2025)",
       "url": "https://aws.amazon.com/blogs/security/how-to-automate-session-manager-preferences-across-your-organization/"
     },
     {
-      "title": "aws-samples/sample-how-to-automate-session-manager-preferences — GitHub",
+      "title": "aws-samples/sample-how-to-automate-session-manager-preferences \u2014 GitHub",
       "url": "https://github.com/aws-samples/sample-how-to-automate-session-manager-preferences"
     },
     {
-      "title": "Implementing AWS Session Manager logging guardrails in a multi-account environment — AWS Cloud Operations Blog",
+      "title": "Implementing AWS Session Manager logging guardrails in a multi-account environment \u2014 AWS Cloud Operations Blog",
       "url": "https://aws.amazon.com/blogs/mt/implementing-aws-session-manager-logging-guardrails-in-a-multi-account-environment/"
     },
     {
-      "title": "aws-samples/ssm-monitoring-logging-guardrails-multiaccount — GitHub",
+      "title": "aws-samples/ssm-monitoring-logging-guardrails-multiaccount \u2014 GitHub",
       "url": "https://github.com/aws-samples/ssm-monitoring-logging-guardrails-multiaccount"
     },
     {
-      "title": "Build an end-to-end ABAC strategy with AWS IAM Identity Center and Okta — AWS Security Blog",
+      "title": "Build an end-to-end ABAC strategy with AWS IAM Identity Center and Okta \u2014 AWS Security Blog",
       "url": "https://aws.amazon.com/blogs/security/build-an-end-to-end-attribute-based-access-control-strategy-with-aws-sso-and-okta/"
     },
     {
-      "title": "CreateInstanceAccessControlAttributeConfiguration — IAM Identity Center API Reference",
+      "title": "CreateInstanceAccessControlAttributeConfiguration \u2014 IAM Identity Center API Reference",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_CreateInstanceAccessControlAttributeConfiguration.html"
     },
     {
-      "title": "AWS::SSO::InstanceAccessControlAttributeConfiguration — AWS CloudFormation",
+      "title": "AWS::SSO::InstanceAccessControlAttributeConfiguration \u2014 AWS CloudFormation",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-sso-instanceaccesscontrolattributeconfiguration.html"
     },
     {
-      "title": "aws_ssoadmin_instance_access_control_attributes — Terraform AWS Provider",
+      "title": "aws_ssoadmin_instance_access_control_attributes \u2014 Terraform AWS Provider",
       "url": "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_instance_access_control_attributes"
     },
     {
-      "title": "ProvisionPermissionSet — IAM Identity Center API Reference",
+      "title": "ProvisionPermissionSet \u2014 IAM Identity Center API Reference",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/APIReference/API_ProvisionPermissionSet.html"
     },
     {
-      "title": "Understanding authentication sessions in IAM Identity Center — AWS",
+      "title": "Understanding authentication sessions in IAM Identity Center \u2014 AWS",
       "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/authconcept.html"
     },
     {
-      "title": "Define a custom session duration and terminate active sessions in IAM Identity Center — AWS Security Blog",
+      "title": "Define a custom session duration and terminate active sessions in IAM Identity Center \u2014 AWS Security Blog",
       "url": "https://aws.amazon.com/blogs/security/define-a-custom-session-duration-and-terminate-active-sessions-in-iam-identity-center/"
     },
     {
-      "title": "IIdentityCenterConfig interface — LZA TypeDoc v1.10.0",
+      "title": "IIdentityCenterConfig interface \u2014 LZA TypeDoc v1.10.0",
       "url": "https://awslabs.github.io/landing-zone-accelerator-on-aws/v1.10.0/typedocs/latest/interfaces/___packages__aws_accelerator_config_lib_models_iam_config.IIdentityCenterConfig.html"
     },
     {
-      "title": "IdentityCenterPermissionSetConfig — LZA TypeDoc v1.3.2",
+      "title": "IdentityCenterPermissionSetConfig \u2014 LZA TypeDoc v1.3.2",
       "url": "https://awslabs.github.io/landing-zone-accelerator-on-aws/latest/typedocs/v1.3.2/classes/_aws_accelerator_config.IdentityCenterPermissionSetConfig.html"
     },
     {
-      "title": "IdentityCenterAssignmentConfig — LZA TypeDoc v1.9.2",
+      "title": "IdentityCenterAssignmentConfig \u2014 LZA TypeDoc v1.9.2",
       "url": "https://awslabs.github.io/landing-zone-accelerator-on-aws/v1.10.0/typedocs/v1.9.2/classes/_aws_accelerator_config.IdentityCenterAssignmentConfig.html"
     },
     {
-      "title": "IAM Configuration — LZA DeepWiki",
+      "title": "IAM Configuration \u2014 LZA DeepWiki",
       "url": "https://deepwiki.com/awslabs/landing-zone-accelerator-on-aws/3.5-iam-configuration"
     },
     {
-      "title": "identityCenter: Error Assigning IAM Permissions to Management Account — GitHub Issue #215",
+      "title": "identityCenter: Error Assigning IAM Permissions to Management Account \u2014 GitHub Issue #215",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/issues/215"
     },
     {
-      "title": "IAM Identity Center fails to create Management Account assignments (v1.7.0+) — GitHub Issue #496",
+      "title": "IAM Identity Center fails to create Management Account assignments (v1.7.0+) \u2014 GitHub Issue #496",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/issues/496"
     },
     {
-      "title": "identityCenter: Solution Doesn't Handle Nested Organizational Units — GitHub Issue #220",
+      "title": "identityCenter: Solution Doesn't Handle Nested Organizational Units \u2014 GitHub Issue #220",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/issues/220"
     },
     {
-      "title": "LZA does not support IIC user/group creation — GitHub Issue #533",
+      "title": "LZA does not support IIC user/group creation \u2014 GitHub Issue #533",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/issues/533"
     },
     {
-      "title": "SSM Document Sharing Fails in SecurityAudit Stack — GitHub Issue #786 (LZA v1.12.1)",
+      "title": "SSM Document Sharing Fails in SecurityAudit Stack \u2014 GitHub Issue #786 (LZA v1.12.1)",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/issues/786"
     },
     {
-      "title": "ssmAutomation is not sharing documents with other accounts — GitHub Issue #419 (LZA)",
+      "title": "ssmAutomation is not sharing documents with other accounts \u2014 GitHub Issue #419 (LZA)",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/issues/419"
     },
     {
-      "title": "awslabs/landing-zone-accelerator-on-aws — GitHub main repository",
+      "title": "awslabs/landing-zone-accelerator-on-aws \u2014 GitHub main repository",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws"
     },
     {
-      "title": "Landing Zone Accelerator on AWS CHANGELOG (v1.14.2 branch) — runAs preserve fix",
+      "title": "Landing Zone Accelerator on AWS CHANGELOG (v1.14.2 branch) \u2014 runAs preserve fix",
       "url": "https://github.com/awslabs/landing-zone-accelerator-on-aws/blob/release/v1.14.2/CHANGELOG.md"
     },
     {
-      "title": "Core pipeline stages — Landing Zone Accelerator on AWS",
+      "title": "Core pipeline stages \u2014 Landing Zone Accelerator on AWS",
       "url": "https://docs.aws.amazon.com/solutions/latest/landing-zone-accelerator-on-aws/awsaccelerator-pipeline.html"
     },
     {
-      "title": "Account creation and drift detection — Landing Zone Accelerator on AWS",
+      "title": "Account creation and drift detection \u2014 Landing Zone Accelerator on AWS",
       "url": "https://docs.aws.amazon.com/solutions/latest/landing-zone-accelerator-on-aws/account-creation-and-drift-detection.html"
     },
     {
-      "title": "aws-samples/lza-account-creation-workflow — GitHub",
+      "title": "aws-samples/lza-account-creation-workflow \u2014 GitHub",
       "url": "https://github.com/aws-samples/lza-account-creation-workflow"
     },
     {
-      "title": "StackSets concepts — AWS CloudFormation",
+      "title": "StackSets concepts \u2014 AWS CloudFormation",
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html"
     },
     {
@@ -293,43 +329,43 @@
       "url": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-stackset.html"
     },
     {
-      "title": "Turn on Run As support for Linux and macOS managed nodes — AWS Systems Manager (session preferences)",
+      "title": "Turn on Run As support for Linux and macOS managed nodes \u2014 AWS Systems Manager (session preferences)",
       "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-preferences-run-as.html"
     },
     {
-      "title": "Sharing SSM documents — AWS Systems Manager",
+      "title": "Sharing SSM documents \u2014 AWS Systems Manager",
       "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/documents-ssm-sharing.html"
     },
     {
-      "title": "Using Terraform with Landing Zone Accelerator on AWS — AWS Cloud Operations Blog",
+      "title": "Using Terraform with Landing Zone Accelerator on AWS \u2014 AWS Cloud Operations Blog",
       "url": "https://aws.amazon.com/blogs/mt/using-terraform-with-landing-zone-accelerator-on-aws/"
     }
   ],
   "audience_briefs": {
     "engineering_leadership": {
-      "headline": "The SSMSessionRunAs pipeline spans three layers — Entra ID, IAM Identity Center ABAC, and per-account SSM preferences — and LZA owns only the middle layer partially; the ABAC configuration and RunAs enforcement both require tooling outside LZA's scope.",
-      "so_what": "Engineers hitting SSM session failures or incorrect OS username assignment are encountering a multi-layer configuration gap. The root cause (group-derived SSMSessionRunAs) causes hard sign-in rejections from IAM Identity Center. The fix requires three coordinated changes: (1) move SSMSessionRunAs to a per-user Entra attribute synced via SCIM, (2) configure IdC ABAC attribute mapping outside LZA (confirmed LZA gap), and (3) deploy a CloudFormation StackSet via LZA customizations to enforce runAsDefaultUser in every member account with an SCP guardrail. No single tool handles all three layers — this is a deliberate cross-team configuration problem.",
+      "headline": "The SSMSessionRunAs pipeline spans three layers \u2014 Entra ID, IAM Identity Center ABAC, and per-account SSM preferences \u2014 and LZA owns only the middle layer partially; the ABAC configuration and RunAs enforcement both require tooling outside LZA's scope.",
+      "so_what": "Engineers hitting SSM session failures or incorrect OS username assignment are encountering a multi-layer configuration gap. The root cause (group-derived SSMSessionRunAs) causes hard sign-in rejections from IAM Identity Center. The fix requires three coordinated changes: (1) move SSMSessionRunAs to a per-user Entra attribute synced via SCIM, (2) configure IdC ABAC attribute mapping outside LZA (confirmed LZA gap), and (3) deploy a CloudFormation StackSet via LZA customizations to enforce runAsDefaultUser in every member account with an SCP guardrail. No single tool handles all three layers \u2014 this is a deliberate cross-team configuration problem.",
       "bullets": [
-        "Group-derived SSMSessionRunAs causes hard sign-in rejection by IdC ABAC — not silent misbehavior — when a user belongs to more than one qualifying group. The fix is architectural: move to a per-user Entra extension attribute or sAMAccountName synced via SCIM.",
-        "AWSReservedSSO_ roles cannot be tagged by customers. The only path to pass SSMSessionRunAs for IdC-federated users is via SAML assertion or ABAC user-profile attribute — a static role tag is not possible.",
+        "Group-derived SSMSessionRunAs causes hard sign-in rejection by IdC ABAC \u2014 not silent misbehavior \u2014 when a user belongs to more than one qualifying group. The fix is architectural: move to a per-user Entra extension attribute or sAMAccountName synced via SCIM.",
+        "AWSReservedSSO_ roles cannot be tagged by customers. The only path to pass SSMSessionRunAs for IdC-federated users is via SAML assertion or ABAC user-profile attribute \u2014 a static role tag is not possible.",
         "LZA has no configuration surface for IdC ABAC attribute mapping (InstanceAccessControlAttributeConfiguration). This is a confirmed gap across all LZA versions. A supplemental IaC resource (Terraform aws_ssoadmin_instance_access_control_attributes or CloudFormation AWS::SSO::InstanceAccessControlAttributeConfiguration) must own this or it exists only in the IdC console with no version history or drift detection.",
         "LZA explicitly preserves but never writes runAsEnabled or runAsDefaultUser values. A service-managed CloudFormation StackSet in customizations-config.yaml (Root OU, auto-deployment on) with a Lambda custom resource is the correct LZA-native enforcement path. An SCP denying ssm:UpdateDocument on SSM-SessionManagerRunShell is required to prevent post-deployment drift.",
-        "OU-scoped LZA assignments cover direct child accounts only — nested OUs are silently excluded (GitHub #220). Management account assignment failures have occurred in v1.7.0+ (GitHub #215, #496). Both gaps require explicit verification against the deployed LZA version and account hierarchy.",
-        "Active IAM role sessions are not invalidated by permission set updates — in-flight credentials remain valid until session duration expires, up to 12 hours."
+        "OU-scoped LZA assignments cover direct child accounts only \u2014 nested OUs are silently excluded (GitHub #220). Management account assignment failures have occurred in v1.7.0+ (GitHub #215, #496). Both gaps require explicit verification against the deployed LZA version and account hierarchy.",
+        "Active IAM role sessions are not invalidated by permission set updates \u2014 in-flight credentials remain valid until session duration expires, up to 12 hours."
       ],
-      "action_required": "Engineering leadership must authorize and sequence three work streams: (1) Identity/Entra team to move SSMSessionRunAs sourcing to a per-user attribute in Entra ID and configure SCIM sync to propagate it to the IAM Identity Center identity store; (2) Platform/IaC team to bring IdC ABAC attribute configuration (InstanceAccessControlAttributeConfiguration) under version-controlled IaC — either Terraform or a supplemental CloudFormation stack — separate from the LZA config repo; (3) Platform team to design, test, and deploy a cloudFormationStackSets entry in customizations-config.yaml that enforces runAsDefaultUser org-wide with auto-deployment, paired with an SCP guardrail on the Root OU. Architects must decide whether runAsDefaultUser is uniform across all accounts or parameterized per-OU before work stream 3 can be scoped."
+      "action_required": "Engineering leadership must authorize and sequence three work streams: (1) Identity/Entra team to move SSMSessionRunAs sourcing to a per-user attribute in Entra ID and configure SCIM sync to propagate it to the IAM Identity Center identity store; (2) Platform/IaC team to bring IdC ABAC attribute configuration (InstanceAccessControlAttributeConfiguration) under version-controlled IaC \u2014 either Terraform or a supplemental CloudFormation stack \u2014 separate from the LZA config repo; (3) Platform team to design, test, and deploy a cloudFormationStackSets entry in customizations-config.yaml that enforces runAsDefaultUser org-wide with auto-deployment, paired with an SCP guardrail on the Root OU. Architects must decide whether runAsDefaultUser is uniform across all accounts or parameterized per-OU before work stream 3 can be scoped."
     },
     "product_owner": {
-      "headline": "Engineers using AWS terminal access (SSM Session Manager) may be failing to connect or connecting as the wrong server user — fixing this requires coordinated changes across three systems: Entra ID (Azure AD), AWS Identity Center, and the AWS account configuration layer.",
-      "so_what": "When engineers access AWS servers through Session Manager, a chain of three settings must be correctly configured and in sync: (1) Entra ID must store and send each engineer's server login name as a per-user property — not derived from group membership; (2) AWS Identity Center must be configured to read that property and pass it into each session; (3) each AWS account must have a consistent fallback login-user setting. The Landing Zone Accelerator (LZA — the tool governing all AWS accounts) handles part of layer 2 but leaves confirmed gaps at both the attribute-mapping configuration and the per-account SSM settings. No single tool currently closes all three layers without deliberate engineering work.",
+      "headline": "Engineers using AWS terminal access (SSM Session Manager) may be failing to connect or connecting as the wrong server user \u2014 fixing this requires coordinated changes across three systems: Entra ID (Azure AD), AWS Identity Center, and the AWS account configuration layer.",
+      "so_what": "When engineers access AWS servers through Session Manager, a chain of three settings must be correctly configured and in sync: (1) Entra ID must store and send each engineer's server login name as a per-user property \u2014 not derived from group membership; (2) AWS Identity Center must be configured to read that property and pass it into each session; (3) each AWS account must have a consistent fallback login-user setting. The Landing Zone Accelerator (LZA \u2014 the tool governing all AWS accounts) handles part of layer 2 but leaves confirmed gaps at both the attribute-mapping configuration and the per-account SSM settings. No single tool currently closes all three layers without deliberate engineering work.",
       "risk_level": "High",
       "bullets": [
-        "Engineers whose Entra ID groups each try to specify a different server login name will have their AWS sign-in hard-rejected by AWS Identity Center — they cannot open any Session Manager terminal until the Entra ID configuration is corrected.",
+        "Engineers whose Entra ID groups each try to specify a different server login name will have their AWS sign-in hard-rejected by AWS Identity Center \u2014 they cannot open any Session Manager terminal until the Entra ID configuration is corrected.",
         "The per-user server login name must be stored directly on the user's Entra profile (like an employee ID), not derived from group membership. This requires an Entra ID admin change and a SCIM sync update.",
         "The AWS Identity Center setting that reads that attribute and passes it into each session (called ABAC attribute configuration) is not managed by LZA. If it was configured manually in the AWS console, there is no version history and no automated drift detection.",
-        "Every AWS member account has its own independent copy of the server-access fallback setting. LZA does not write this setting — it must be deployed separately via a CloudFormation StackSet. Without it, new accounts have an unconfigured default.",
+        "Every AWS member account has its own independent copy of the server-access fallback setting. LZA does not write this setting \u2014 it must be deployed separately via a CloudFormation StackSet. Without it, new accounts have an unconfigured default.",
         "A policy guardrail (SCP) must be applied to prevent account administrators from changing or removing the per-account setting after it is deployed. Without this, the configuration will silently drift.",
-        "New AWS accounts created through LZA will automatically receive the correct settings once the StackSet is in place — no manual steps are needed per new account after the one-time engineering deployment."
+        "New AWS accounts created through LZA will automatically receive the correct settings once the StackSet is in place \u2014 no manual steps are needed per new account after the one-time engineering deployment."
       ],
       "next_steps": {
         "po_action": "PO/EM to facilitate a cross-team coordination session with the Identity team (Entra ID / Azure AD owners), the Platform/IaC team (LZA config repo owners), and the Security team (SCP governance). Three work streams must be scoped and sequenced: (1) Entra ID attribute sourcing change, (2) AWS Identity Center ABAC configuration brought under version-controlled IaC, (3) CloudFormation StackSet deployment for per-account SSM settings with SCP guardrail. Escalate to Engineering Leadership if resource allocation across the three teams is unclear.",
@@ -338,16 +374,16 @@
           "Platform/IaC team: identify whether any IaC tool currently owns the AWS Identity Center ABAC attribute configuration (InstanceAccessControlAttributeConfiguration); if not, create a tracked IaC resource (Terraform or CloudFormation) and add it to the version-controlled config pipeline.",
           "Platform/IaC team: add a cloudFormationStackSets entry to customizations-config.yaml targeting Root OU with auto-deployment enabled, carrying a Lambda function that writes the agreed runAsDefaultUser value to SSM-SessionManagerRunShell in each member account.",
           "Security/Platform team: write and deploy an SCP to the Root OU denying ssm:UpdateDocument, ssm:CreateDocument, and ssm:DeleteDocument on SSM-SessionManagerRunShell for all principals except the StackSet service role and LZA pipeline role.",
-          "Platform team: validate the full pipeline end-to-end in a non-production account — confirm a test user with correct Entra attribute gets the right OS username in a Session Manager session, and confirm the SCP blocks unauthorized modification of the SSM document.",
+          "Platform team: validate the full pipeline end-to-end in a non-production account \u2014 confirm a test user with correct Entra attribute gets the right OS username in a Session Manager session, and confirm the SCP blocks unauthorized modification of the SSM document.",
           "Platform team: audit existing member accounts for their current SSM-SessionManagerRunShell state; accounts vended before the StackSet existed may need remediation in the initial StackSet pipeline run."
         ],
-        "leadership_input": "Architects and senior ICs must decide: (1) whether a single shared OS username is the correct default across all accounts (simpler) or whether different account types or OUs should have different default users (more complex StackSet parameterization); (2) which IaC tool takes ownership of the IdC ABAC attribute configuration — Terraform or CloudFormation — and how that integrates with the existing LZA config repo operational model; (3) whether the SCP exception list for the StackSet and LZA pipeline roles is consistent with the organization's existing SCP governance strategy."
+        "leadership_input": "Architects and senior ICs must decide: (1) whether a single shared OS username is the correct default across all accounts (simpler) or whether different account types or OUs should have different default users (more complex StackSet parameterization); (2) which IaC tool takes ownership of the IdC ABAC attribute configuration \u2014 Terraform or CloudFormation \u2014 and how that integrates with the existing LZA config repo operational model; (3) whether the SCP exception list for the StackSet and LZA pipeline roles is consistent with the organization's existing SCP governance strategy."
       },
       "questions_to_ask_engineering": [
-        "Are there engineers today who are failing to start SSM sessions or connecting as the wrong server user — and have we confirmed that misconfigured Entra group attributes or missing SSM-SessionManagerRunShell settings are the cause?",
+        "Are there engineers today who are failing to start SSM sessions or connecting as the wrong server user \u2014 and have we confirmed that misconfigured Entra group attributes or missing SSM-SessionManagerRunShell settings are the cause?",
         "Does any IaC tool currently own the AWS Identity Center ABAC attribute configuration, or was it set manually in the console with no version history?",
-        "Has the per-account SSM-SessionManagerRunShell document been audited across all member accounts — do we know which accounts have RunAs enabled, and with what username?",
-        "If we change the Entra ID attribute source for SSMSessionRunAs, how quickly does that change propagate to active engineer sessions — and will engineers need to log out and back in to pick up the new attribute value?"
+        "Has the per-account SSM-SessionManagerRunShell document been audited across all member accounts \u2014 do we know which accounts have RunAs enabled, and with what username?",
+        "If we change the Entra ID attribute source for SSMSessionRunAs, how quickly does that change propagate to active engineer sessions \u2014 and will engineers need to log out and back in to pick up the new attribute value?"
       ]
     }
   }

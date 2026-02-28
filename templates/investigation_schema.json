@@ -233,6 +233,25 @@
         "url": {
           "title": "Url",
           "type": "string"
+        },
+        "tier": {
+          "anyOf": [
+            {
+              "enum": [
+                "official_doc",
+                "user_guide",
+                "blog",
+                "community"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Source authority tier. official_doc = API/SDK/service reference docs; user_guide = official user guides and tutorials; blog = vendor or third-party blog posts; community = Stack Overflow, GitHub issues, forums. Prefer official_doc > user_guide > blog > community. Findings backed only by blog or community sources should be hedged.",
+          "title": "Tier"
         }
       },
       "required": [
@@ -254,6 +273,11 @@
       "type": "string"
     },
     "status": {
+      "enum": [
+        "Complete",
+        "In Progress",
+        "Superseded"
+      ],
       "title": "Status",
       "type": "string"
     },

@@ -1,7 +1,7 @@
 {
   "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration \u2014 Schema and Configuration Surface",
   "date": "2026-02-27",
-  "status": "complete",
+  "status": "Complete",
   "question": "What is the high-level configuration surface of InstanceAccessControlAttributeConfiguration in IAM Identity Center for mapping a per-user SCIM-synced attribute (e.g. sAMAccountName or a custom extension attribute) to the ssm:RunAsDefaultRunAs session tag \u2014 as exposed via AWS CDK (TypeScript), CloudFormation, and AWS CLI?",
   "context": "IAM Identity Center's Attribute-Based Access Control (ABAC) feature allows user attributes stored in or synced to the IdC identity store to be passed as principal session tags into AWS. When a user assumes a permission set role, any configured attributes are emitted as aws:PrincipalTag/<Key> values on the STS session. SSM Session Manager's RunAs feature reads the SSMSessionRunAs session tag to determine which OS user to use for a session. Connecting these two surfaces \u2014 IdC ABAC attribute configuration and the SSM session tag \u2014 is the mechanism by which a SCIM-synced AD attribute (such as sAMAccountName or a custom extension attribute) can drive per-user OS login on managed instances without any per-user IAM configuration. The InstanceAccessControlAttributeConfiguration resource is the single control plane object that enables this pipeline.",
   "quick_reference": {

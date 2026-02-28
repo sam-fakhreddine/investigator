@@ -1,7 +1,7 @@
 {
   "topic": "IAM Identity Center InstanceAccessControlAttributeConfiguration \u2014 Schema, Configuration Surface, Drift, and Idempotency",
   "date": "2026-02-27",
-  "status": "complete",
+  "status": "Complete",
   "question": "What is the high-level configuration surface and operational behavior of IAM Identity Center's InstanceAccessControlAttributeConfiguration \u2014 covering the attribute schema (CDK TypeScript, CloudFormation, CLI, console), the create/update/delete API distinction, and drift and idempotency behavior \u2014 for teams mapping a per-user SCIM-synced attribute to the SSMSessionRunAs session tag?",
   "context": "IAM Identity Center's Attribute-Based Access Control (ABAC) feature allows user attributes stored in or synced to the IdC identity store to be passed as principal session tags into AWS. When a user assumes a permission set role, configured attributes are emitted as aws:PrincipalTag/<Key> values on the STS session. SSM Session Manager's RunAs feature reads the SSMSessionRunAs session tag to determine which OS user to use for a session. Connecting IdC ABAC attribute configuration and the SSM session tag \u2014 via a SCIM-synced AD attribute such as sAMAccountName \u2014 enables per-user OS login on managed instances without any per-user IAM configuration. The InstanceAccessControlAttributeConfiguration resource is the single control plane object that enables this pipeline. Because it is a singleton per IdC instance and exposes a create/update/delete API with no drift detection support, its IaC lifecycle has non-obvious failure modes that must be understood before deployment.",
   "quick_reference": {

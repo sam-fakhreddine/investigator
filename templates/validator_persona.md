@@ -39,11 +39,20 @@ For every URL in the `sources` array:
 - Confirm the page title and content match the claimed title
 - Assign one of: `VERIFIED` | `REDIRECT` (resolves but URL has changed) | `DEAD` (404 / unreachable) | `UNVERIFIABLE` (blocked / paywalled / login required)
 
-**3. Finding Spot-Checks**
-For high-stakes factual claims (file paths, binary names, technique identifiers, attributed quotes, specific attacker behaviours):
+**3. Finding Verification — ALL findings**
+
+Check **every** key finding, not just high-stakes ones. Every finding gets a row in the Finding Verification table. For each:
 - Cross-reference against live documentation or web search
 - Assign one of: `CONFIRMED` | `PARTIALLY CONFIRMED` | `UNVERIFIED` | `CONTRADICTED`
 - Record the evidence and the source used for the verdict
+
+Additionally check for:
+
+**Internal consistency** — do any findings contradict each other? If two findings say opposite things about the same behavior, flag both as `INTERNAL_CONFLICT` and note the contradiction. The investigator must resolve the conflict before the investigation is final.
+
+**Blog/community-only sourcing** — if a finding is backed only by `tier: blog` or `tier: community` sources (no `official_doc` or `user_guide` source), add a `NEEDS_PRIMARY_SOURCE` flag in the Notes column. The finding should be hedged or moved to `open_questions` unless a primary source is added.
+
+**Hedging appropriateness** — if a finding uses uncertain language ("may", "might", "could", "appears to"), verify whether the uncertainty is warranted or whether the claim can be definitively confirmed. If the claim *can* be confirmed, note it as `CONFIRM_OR_HEDGE` so the investigator strengthens or softens appropriately.
 
 ### Remediation Guidance
 
