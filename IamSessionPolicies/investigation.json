@@ -1,0 +1,270 @@
+{
+  "topic": "IAM Session Policies and Role Sprawl Reduction in AWS with IAM Identity Center",
+  "date": "2026-03-02",
+  "status": "Complete",
+  "question": "Can AWS session policies meaningfully reduce IAM role sprawl in enterprise environments using IAM Identity Center — and if so, under what conditions and with what tradeoffs?",
+  "context": "Engineering teams accumulate large numbers of fine-grained IAM roles — one per use case, per team, or per environment. Session policies (scoped permissions passed at STS assume-role time) appear to offer a consolidation mechanism. IAM Identity Center, the dominant enterprise identity layer, imposes a structural constraint: its GetRoleCredentials API does not accept a Policy parameter, meaning session policies cannot be injected at login time. Three sub-investigations cover the mechanics of session policy evaluation, the documented role consolidation patterns and their viability, and the operational constraints (size limits, tooling gaps, audit visibility) that govern production feasibility. Together they establish which consolidation paths are viable, which are blocked by Identity Center's credential architecture, and what compounding constraints apply when the viable paths are pursued.",
+  "quick_reference": {
+    "title": "Role Consolidation Pattern Viability — Identity Center vs. Direct STS",
+    "columns": ["Pattern", "Works with Identity Center", "Works with Direct STS", "Key Constraint"],
+    "rows": [
+      ["Broad base role + inline session policy (Policy parameter)", "No", "Yes", "GetRoleCredentials has no Policy parameter; session policy cannot be injected at Identity Center login time"],
+      ["Broad base role + managed session policy ARNs (PolicyArns parameter)", "No", "Yes", "Same GetRoleCredentials limitation; PolicyArns not accepted; up to 10 ARNs and 2,048-char combined plaintext limit apply for direct STS callers"],
+      ["Post-issuance role chaining with session policy", "Partial", "Yes", "Identity Center issues credentials first; caller then calls AssumeRole with session policy; hard 1-hour session ceiling applies regardless of permission set duration"],
+      ["ABAC via session tags and permission set conditions", "Yes (native)", "Yes", "Requires consistent resource tagging discipline; differentiates access by user attribute matched to resource tag — cannot restrict action namespace the way session policies do"],
+      ["Multiple narrow permission sets (no consolidation)", "Yes (fully supported)", "Yes", "Role proliferation shifts from IAM layer to permission set layer; no runtime dynamism; assignment is administrative"],
+      ["GetFederationToken broker pattern", "Not applicable", "Yes (IAM user principal only)", "Requires IAM user credentials as the calling principal; architecturally incompatible with Identity Center user identity model"]
+    ],
+    "notes": "The structural gap is the GetRoleCredentials API (Identity Center portal API) accepting only three parameters with no Policy field. Session policies work cleanly for direct STS callers; Identity Center eliminates the injection point. ABAC is the only Identity Center-native mechanism that reduces permission set proliferation without bypassing the standard credential path."
+  },
+  "key_findings": [
+    "The STS AssumeRole API accepts an optional Policy parameter (inline JSON, max 2,048 combined chars with PolicyArns) and up to 10 managed policy ARN references; effective session permissions are the strict intersection of the role's identity-based policies and the session policy. This is the technical foundation of the broad-base-role consolidation pattern.",
+    "IAM Identity Center issues credentials via GetRoleCredentials, a proprietary portal API accepting only three parameters (accessToken, accountId, roleName) with no Policy parameter — not via STS AssumeRole directly. This single API design decision makes the broad-base-role + session-policy consolidation pattern structurally unavailable to any organization whose users authenticate through Identity Center's standard path.",
+    "Post-issuance role chaining is the only viable hybrid path: Identity Center issues credentials, then the application calls STS AssumeRole with a session policy using those credentials as the principal. However, AWS imposes a hard 1-hour session ceiling on all role-chained sessions regardless of the permission set's configured duration (up to 12 hours), creating a persistent operational constraint for interactive users and long-running workloads.",
+    "ABAC via session tags is the Identity Center-native mechanism for reducing permission set proliferation: Identity Center propagates user directory attributes as session tags at authentication time; permission set policies use aws:PrincipalTag condition keys matched against resource tags. ABAC reduces permission set count but operates on a fundamentally different control surface than session policies — it enforces resource-level access based on tag matching, not action-level restriction across the session.",
+    "Two independent size constraints apply to every session policy call: a 2,048-character plaintext limit on the combined inline policy JSON and managed policy ARN strings (whitespace counts), and a separate opaque packed binary limit whose byte ceiling AWS does not publish. Session tags share this binary budget; a call can fail PackedPolicyTooLarge even when the plaintext budget is not exhausted. This renders the packed limit unpredictable in any environment that also uses ABAC session tags.",
+    "Session policies have no presence in the AWS Management Console (no authoring, viewing, or attachment workflow), are not accepted by the IAM Policy Simulator (pre-deployment validation requires live environment testing), and the inline Policy document does not appear in documented CloudTrail AssumeRole log examples — leaving a structural audit gap where the effective permission scope of a session cannot be reconstructed post-hoc from CloudTrail alone.",
+    "When both a permissions boundary and a session policy are active, effective permissions are the three-way intersection of identity-based policy, permissions boundary, and session policy — adding a third evaluation layer. When a resource-based policy grants access to the session ARN (not the role ARN) as principal, those permissions bypass the session policy filter entirely, a behavioral exception with security implications.",
+    "The practical consolidation ceiling under Identity Center is the permission set: one permission set maps to one IAM role per account, and role proliferation shifts from the IAM layer to the permission set layer. Without ABAC, each distinct permission profile requires a distinct permission set. ABAC can reduce this only when resource tagging is consistent across accounts."
+  ],
+  "concepts": [
+    {
+      "name": "Session policy",
+      "description": "A JSON IAM policy document (or reference to up to 10 managed policy ARNs) passed as a parameter at STS credential issuance time via AssumeRole, AssumeRoleWithSAML, AssumeRoleWithWebIdentity, or GetFederationToken. Applies for the lifetime of the temporary credential; restricts but never expands the role's existing identity-based permissions. The intersection with the role's policies is the sole effective permission set for the session."
+    },
+    {
+      "name": "GetRoleCredentials API",
+      "description": "The IAM Identity Center portal API used by the AWS access portal and AWS CLI sso login to issue temporary credentials for a permission set assignment. Accepts only three parameters: accessToken, accountId, and roleName. Has no Policy or PolicyArns parameter. This API design is the structural constraint that makes session policy injection unavailable to Identity Center-mediated access."
+    },
+    {
+      "name": "Broad base role",
+      "description": "An IAM role with a relatively permissive set of policies intended to serve multiple use cases. In a consolidation pattern, a single such role is assumed by multiple callers, each supplying a narrowing session policy at assume-role time. This pattern is viable only for direct STS callers; it is not available through Identity Center's standard credential path."
+    },
+    {
+      "name": "ABAC (Attribute-Based Access Control) via session tags",
+      "description": "An Identity Center-native mechanism where user directory attributes are propagated as session tags during authentication. Permission set policies reference these tags via aws:PrincipalTag condition keys matched against resource tags. Enables a single permission set to differentiate access for multiple users without caller-supplied session policies, but cannot restrict the action namespace the way an inline session policy can. Session tags share the packed binary size budget with session policies."
+    },
+    {
+      "name": "PackedPolicySize",
+      "description": "A percentage value returned in the STS AssumeRole response indicating how close the combined inline session policy, managed policy ARNs, and session tags are to an internal packed binary size ceiling. The actual byte ceiling is not published by AWS. Exceeding 100% results in a PackedPolicyTooLarge HTTP 400 error, which can occur even when the 2,048-character plaintext limit has not been reached. Unpredictable when ABAC session tags are also in use."
+    },
+    {
+      "name": "Role chaining",
+      "description": "Using temporary credentials from one assumed role to call AssumeRole again. AWS caps the resulting session at 1 hour maximum regardless of the configured MaxSessionDuration on the target role or the permission set's session duration (up to 12 hours). Relevant because the Identity Center credentials + second AssumeRole workaround for session policy injection produces a chained session subject to this ceiling."
+    },
+    {
+      "name": "Permission set (IAM Identity Center)",
+      "description": "An IAM Identity Center construct that defines a collection of IAM policies provisioned as an IAM role in each assigned account. Permission set policies are fixed at provisioning time; no caller-supplied session policy is injected at login. Role proliferation shifts from IAM to the permission set layer — ABAC reduces this by allowing one permission set to serve users with differentiated access based on attributes."
+    },
+    {
+      "name": "Policy intersection",
+      "description": "The fundamental evaluation rule for session policies: only actions allowed by both the role's identity-based policy and the session policy are permitted. When a permissions boundary is also active, effective permissions are the three-way intersection. An explicit deny in any layer overrides all allows. Session policies do not union with role policies."
+    }
+  ],
+  "tensions": [
+    "The STS API surface enables dynamic session policy injection at assume-role time, supporting broad-base-role consolidation for direct callers; Identity Center's GetRoleCredentials API has no Policy parameter, creating a gap between what IAM supports in principle and what Identity Center-mediated access allows in practice. This gap is structural, not a configuration option — it cannot be bridged without bypassing Identity Center's credential issuance path entirely.",
+    "Role chaining as the hybrid workaround restores dynamic session policy capability for Identity Center users but imposes a hard 1-hour session ceiling, conflicting with permission set-configurable durations of up to 12 hours. Interactive users and long-running workloads pay a persistent UX and operational cost for a mechanism that already requires two round trips to STS.",
+    "ABAC and session policies address different control surfaces: ABAC enforces resource-level access based on tag matching at evaluation time; session policies restrict the action namespace for the entire session regardless of resource tags. Replacing session policies with ABAC introduces tag-coverage dependency — a misconfigured or missing tag can silently over-permit access in a way that a session policy would not allow.",
+    "The 2,048-character plaintext limit is small relative to realistic least-privilege policies for services with broad action surfaces (S3, EC2, IAM); achieving meaningful scoping often requires pre-staging managed policies, which shifts complexity back toward a managed-policy proliferation problem rather than eliminating it. Session tags and session policies share the same opaque binary budget, making the effective ceiling unpredictable in ABAC-heavy environments.",
+    "Session policies provide no audit trail of their content in CloudTrail, yet they are the mechanism by which effective permissions differ from the role policy; organizations adopting this pattern must build out-of-band correlation mechanisms that do not exist in the standard IAM role model — increasing total compliance infrastructure cost at the same time as the pattern reduces role count.",
+    "ABAC-based consolidation is viable only when resource tagging is consistent and enforced across all accounts; without a tagging policy and tag compliance tooling, ABAC conditions silently over-permit access for untagged resources, making a broader permission set more dangerous than the fine-grained roles it replaced."
+  ],
+  "open_questions": [
+    "Whether AWS will extend the GetRoleCredentials or equivalent Identity Center credential API to accept a session policy parameter has not been publicly announced or documented as of the investigation date.",
+    "What is the actual byte ceiling for the PackedPolicySize packed binary format? AWS reports only a percentage; the underlying byte limit is not publicly documented, making the interaction between ABAC session tag volume and session policy budget unquantifiable without live environment testing.",
+    "Does CloudTrail log the inline Policy parameter in the requestParameters field for AssumeRole events? Official documentation examples omit it; this has not been definitively confirmed or denied — only live environment testing can settle this, and it directly determines the compliance viability of the pattern for regulated workloads.",
+    "Whether the role chaining 1-hour session limit applies to IAM Roles Anywhere or other credential-path variants, and whether any supported mechanism restores longer-duration sessions when session policy injection is needed, is not addressed across the three sub-investigations.",
+    "The interaction between Identity Center's Trusted Identity Propagation (CreateTokenWithIAM) and the role consolidation pattern is out of scope across all sub-investigations; this mechanism targets service-to-service authorization and may alter the viable pattern space.",
+    "Can the IAM Policy Simulator be extended to accept a session policy as a named input, or is this a deliberate architectural omission? No AWS documentation addresses this gap, and without it pre-deployment validation of session policy behavior has no tooling path.",
+    "Whether the resource-based policy session-ARN bypass — where a resource policy naming the session ARN directly avoids session policy filtering — is exploitable in privilege escalation scenarios across Identity Center environments remains unexamined."
+  ],
+  "sources": [
+    {
+      "title": "AWS IAM User Guide: Session Policies",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html#policies_session",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS STS API Reference: AssumeRole",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS STS API Reference: AssumeRoleWithSAML",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithSAML.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS STS API Reference: AssumeRoleWithWebIdentity",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS STS API Reference: GetFederationToken",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: IAM Quotas and Limits",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: Policy Evaluation Logic",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: Permissions Boundaries",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: Session Tags",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: Policy Evaluation — Session Policies and Permissions Boundaries",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_assumerole.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "AWS IAM User Guide: Requesting Temporary Credentials",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: Monitor and Control Actions with Assumed Roles",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_monitor.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: Logging IAM and STS API Calls with CloudTrail",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM User Guide: IAM Policy Testing with the IAM Policy Simulator",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_testing-policies.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "IAM SimulatePrincipalPolicy API Reference",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_SimulatePrincipalPolicy.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "GetRoleCredentials API Reference — AWS IAM Identity Center Portal API",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/PortalAPIReference/API_GetRoleCredentials.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS IAM Identity Center User Guide: Permission Sets",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsets.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Manage AWS accounts with permission sets — AWS IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsetsconcept.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "AWS IAM Identity Center User Guide: Attributes for Access Control (ABAC)",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/attributesforaccesscontrol.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Attribute-based access control — AWS IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Create permission policies for ABAC in IAM Identity Center — AWS IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/configure-abac-policies.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "AWS IAM Identity Center User Guide: Getting Credentials",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/howtogetcredentials.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Set session duration for AWS accounts — AWS IAM Identity Center User Guide",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/howtosessionduration.html",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Create fine-grained session permissions using IAM managed policies — AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/create-fine-grained-session-permissions-using-iam-managed-policies/",
+      "tier": "blog"
+    },
+    {
+      "title": "Build an end-to-end attribute-based access control strategy with AWS IAM Identity Center and Okta — AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/build-an-end-to-end-attribute-based-access-control-strategy-with-aws-sso-and-okta/",
+      "tier": "blog"
+    },
+    {
+      "title": "Understanding the API options for securely delegating access to your AWS account — AWS Security Blog",
+      "url": "https://aws.amazon.com/blogs/security/understanding-the-api-options-for-securely-delegating-access-to-your-aws-account/",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Resolve the AWS STS PackedPolicyTooLarge IAM Assume Role Error — AWS re:Post",
+      "url": "https://repost.aws/knowledge-center/iam-role-aws-sts-error",
+      "tier": "user_guide"
+    },
+    {
+      "title": "AWS IAM User Guide: Switching Roles via Console",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-console.html",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Session policies cannot be injected through IAM Identity Center's credential path — the only viable consolidation mechanisms are ABAC and role chaining, each with documented ceilings that limit their applicability",
+      "so_what": "The broad-base-role + dynamic session policy consolidation pattern is technically sound at the STS API layer but structurally unavailable to organizations whose users authenticate through IAM Identity Center. GetRoleCredentials — the actual credential issuance API used by the portal and CLI — has no Policy parameter. This is not a configuration gap; it is an API design constraint. Engineering leadership commissioning role consolidation work in an Identity Center environment should evaluate ABAC and role chaining against their specific session duration and resource tagging requirements before approving an architecture, because neither alternative fully replicates session policy behavior.",
+      "bullets": [
+        "The GetRoleCredentials API (Identity Center's credential issuance endpoint) accepts no Policy parameter; session policy injection at login time is structurally unavailable for Identity Center users — not a missing feature flag or configuration option.",
+        "Post-issuance role chaining restores dynamic session policy capability but hard-caps sessions at 1 hour regardless of the permission set's configurable duration (up to 12 hours); any workload or interactive user requiring longer sessions cannot use this pattern.",
+        "ABAC via session tags is the Identity Center-native consolidation mechanism; it reduces permission set count by matching user attributes against resource tags — but it enforces access at the resource level, not the action level, and is only as reliable as the organization's resource tagging discipline.",
+        "The packed binary size limit shared by session tags and session policies is unpredictable in ABAC-heavy environments; a call can fail with PackedPolicyTooLarge even when the 2,048-character plaintext budget is not exhausted, and the byte ceiling is not published by AWS.",
+        "Session policy content does not appear in documented CloudTrail AssumeRole log examples; forensic reconstruction of a session's effective permissions requires out-of-band correlation mechanisms that must be built and maintained in addition to the session policy pipeline itself.",
+        "The IAM Policy Simulator does not model session policy intersections; pre-deployment validation of effective permissions requires live environment testing, introducing a risk surface that does not exist for static role policies.",
+        "Role proliferation under Identity Center shifts from the IAM layer to the permission set layer; without ABAC, each distinct permission profile requires a distinct permission set, and ABAC is viable only where resource tagging is enforced."
+      ],
+      "action_required": "Architects and IAM platform engineers should validate any proposed role consolidation design against the GetRoleCredentials constraint before endorsing the pattern. If ABAC is the selected path, a resource tag coverage assessment across accounts is a prerequisite — not a follow-up. If role chaining is the selected path, confirm no targeted workloads require sessions longer than 1 hour."
+    },
+    "product_owner": {
+      "headline": "The AWS feature that could reduce IAM role count does not work through the standard enterprise login system — two alternatives exist but each comes with hard limits that affect platform engineering scope and compliance posture",
+      "so_what": "IAM role sprawl is a real maintenance and audit burden in multi-account AWS environments. Session policies appear to offer a consolidation path, but the enterprise login platform (IAM Identity Center) does not support them at login time — a structural API constraint, not a configuration gap. PO/EMs commissioning access simplification work need to understand which alternatives are actually on the table and what prerequisites each requires, to set accurate scope and avoid approving an architecture that cannot be delivered through the current identity stack.",
+      "bullets": [
+        "If the organization logs in through IAM Identity Center (the AWS default for multi-account setups), the session policy consolidation pattern is not available through the standard login path — engineering teams proposing it need an explicit alternative design.",
+        "Option A — ABAC: Engineers configure user attributes in Identity Center; shared roles grant access based on whether the user's attributes match resource tags. Fewer permission sets are needed, but every resource across every account must be tagged consistently. Missing or wrong tags silently over-permit access on a broad role.",
+        "Option B — Role chaining: Users log in through Identity Center, then applications perform a second role assumption with a scoped-down policy. Works technically but caps every session at 1 hour — even for users or workloads that currently run longer sessions under the permission set's configured duration.",
+        "Security and compliance teams cannot reconstruct what permissions were in effect for a session-policy session from CloudTrail alone; a separate logging mechanism is required and must be scoped and costed before the architecture is approved for regulated workloads.",
+        "The AWS Policy Simulator — the standard pre-deployment validation tool for IAM changes — does not support session policy simulation; testing requires a live environment, adding deployment risk that does not exist for standard role policies.",
+        "Reducing IAM role count via session policies shifts complexity to the calling application (policy generation, minification, character budget monitoring, PackedPolicySize alerting); total system complexity may not decrease, only its location."
+      ],
+      "risk_level": "High",
+      "next_steps": {
+        "po_action": "PO/EM should confirm with the IAM platform team which credential issuance path is in use for the roles targeted for consolidation, and which of the two viable alternatives — ABAC or role chaining — the team proposes. Neither should be approved without the prerequisite assessments listed below.",
+        "work_to_assign": [
+          "IAM platform engineers: confirm whether IAM Identity Center GetRoleCredentials is in the credential issuance path for all roles targeted for consolidation.",
+          "IAM platform engineers: assess current resource tag coverage across accounts to determine ABAC viability and estimate tag remediation effort.",
+          "Architects: evaluate whether any targeted workloads or interactive users require sessions longer than 1 hour; if yes, role chaining is off the table for those workloads.",
+          "Security engineering: assess the CloudTrail audit gap for session policy content and define the out-of-band logging mechanism required to meet compliance requirements.",
+          "Platform engineering: prototype the policy generation pipeline and character budget monitoring tooling and report back on implementation cost before the architecture is approved."
+        ],
+        "leadership_input": "Leadership should clarify acceptable risk tolerance for the CloudTrail audit gap before approving this architecture for workloads in regulated environments. Leadership should also decide whether to invest in ABAC infrastructure (tagging policy, tag compliance tooling) as a prerequisite to role consolidation, or to accept the current permission-set-per-use-case model as the operational baseline."
+      },
+      "questions_to_ask_engineering": [
+        "Do users and workloads in scope access AWS through IAM Identity Center? If yes, which consolidation alternative — ABAC or role chaining — is being proposed, and has its specific constraint been evaluated against the workload requirements?",
+        "What is the current resource tag coverage across accounts, and is a tagging enforcement policy already in place?",
+        "Do any targeted workloads or interactive users require sessions longer than 1 hour? If yes, role chaining is not viable for those.",
+        "What is the engineering estimate to build and maintain the policy generation pipeline, character budget monitoring, and PackedPolicySize alerting required if session policies are adopted for direct STS callers?",
+        "What out-of-band audit log mechanism replaces the CloudTrail gap for session policy content, and has this been scoped and costed for compliance review?"
+      ]
+    }
+  }
+}
