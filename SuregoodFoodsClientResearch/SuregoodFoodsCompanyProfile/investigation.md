@@ -1,0 +1,121 @@
+# Investigation: Sure Good Foods — Company Profile
+
+**Date:** 2026-03-02
+**Status:** Complete
+
+---
+
+## Sure Good Foods — At-a-Glance Company Profile
+
+| Attribute | Detail |
+| --- | --- |
+| Company Name | Sure Good Foods Ltd. (SGF) |
+| Legal Entity | Sure Good Foods Ltd. (Canada); Sure Good Foods USA LLC (Delaware); Sure Good Foods Australia Pty Ltd |
+| Headquarters | 2333 North Sheridan Way, Mississauga, Ontario, Canada L5K 1A7 |
+| Founded / Rebranded | Operating since 2000 (as Wilkinson Foods International); rebranded to Sure Good Foods in 2017 |
+| Key Founders | David Forgan and Ray McCague (2017 rebranding and current leadership) |
+| President | Troy Warren |
+| Core Products | Pork, beef, chicken, turkey, lamb/goat, seafood, IQF fruits & vegetables, juice concentrates & purees, frozen potato products, pulses |
+| Target Market | B2B food importers, processors, wholesalers, and distributors across 70+ countries |
+| Business Model | International commodity trading and logistics brokerage — buys from producers globally, sells to commercial buyers globally; no manufacturing or consumer retail |
+| Annual Volume | 46,000+ tonnes (or 1M+ lbs per some sources) of protein, produce, and concentrates annually across 50–70+ countries |
+| Revenue (est.) | ~$19.6 million USD (2025 estimate per third-party sources) |
+| Employees | ~60–99 employees; 60+ traders globally |
+| Key Differentiators | Global trader network, 3,200+ customers, customs/regulatory expertise, real-time market intelligence, industry association memberships |
+| Global Offices | Mississauga (HQ), Australia (Queensland and North Sydney), UAE (Dubai), multiple international markets |
+| Industry Memberships | Canada Pork International, Canadian Meat Council, USMEF, USAPEEC |
+
+> Revenue figure is a third-party estimate from Growjo/Kona Equity (2025); SGF does not publish financials. Employee counts vary across data providers (60–99); the company's own site references '60+ traders'.
+
+---
+
+## Question
+
+> Who is Sure Good Foods — what is the company's background, what products do they make, who is their target market, what is their brand positioning, and what is their apparent business model?
+
+---
+
+## Context
+
+Sure Good Foods (SGF) is a Mississauga-based international food trading company. Understanding their background, product portfolio, and commercial positioning is foundational to any client engagement or pitch preparation involving SGF.
+
+---
+
+## Key Findings
+
+- Sure Good Foods has operated as an international food commodity trader since 2000, originally under the name Wilkinson Foods International Ltd., and was rebranded in 2017 by founders David Forgan and Ray McCague — the name 'Sure-Good' was the house brand of the Forgan family meat-packing business founded in Winnipeg by WWII veteran Jack Forgan, grandfather of co-founder David Forgan.
+- SGF is a pure-play trading and logistics intermediary — it does not manufacture, process, or brand consumer products; its value is entirely in sourcing globally, matching buyers and sellers, managing logistics from origin to destination, and handling customs and regulatory documentation.
+- The company's product portfolio spans nine categories: pork, beef, chicken, turkey, lamb and goat, seafood, IQF fruits and vegetables, juice concentrates and purees, and frozen potato products — signalling a deliberate diversification from its protein-first origins into produce and ingredients.
+- SGF's stated geographic reach covers 70+ countries, with particular depth in Asia (Japan, China, Hong Kong, Korea, Taiwan, Vietnam, Philippines, Singapore, Malaysia), North America (Canada, USA, Mexico), the Caribbean, Central and South America, and growing presence in Central Asia, Southeast Asia, the Middle East, Eastern Europe, and Oceania.
+- The company claims a customer base of 3,200+ accounts globally, managed by 60+ traders — a trader-to-customer ratio that frames SGF as a relationship-driven commercial sales organization rather than a platform or marketplace.
+- SGF opened its first Australian office in March 2022 (North Sydney and Queensland), explicitly to access Australasia's protein-producing regions — reinforcing that geographic expansion is driven by supply-side sourcing strategy, not demand-side market entry.
+- In November 2023, SGF announced a commercial partnership with Argyle Foods Group (an Australian vertically integrated beef producer) to increase North American sales of grassfed, GMO-free, antibiotic-free, HGP-free product — signalling an emerging capability to handle premium/specialty protein supply chains, not only commodity-grade product.
+- SGF holds active memberships in Canada Pork International, the Canadian Meat Council, the United States Meat Export Federation (USMEF), and the United States Poultry and Egg Export Council (USAPEEC) — four of the principal North American meat export promotion bodies, positioning SGF as a credentialed industry participant rather than a niche broker.
+- Third-party data providers (Growjo, Kona Equity) estimate SGF's annual revenue at approximately $19.6 million USD as of 2025, with 60–99 employees — indicating a mid-market size for an international commodity trader, but one operating at significant volume given the multi-continent scope.
+- The company's website self-describes as an 'International Trade Specialist' and its brand positioning centers on three pillars: global sourcing breadth, logistics expertise (door-to-door, customs-inclusive), and real-time market intelligence delivered by experienced traders — B2B credibility rather than consumer brand appeal.
+- SGF's website is built on Wix and carries a 2021 copyright date, which combined with the absence of a consumer e-commerce interface, confirms that digital presence is informational/credentialing rather than a sales channel — deal flow is relationship and trader driven.
+- The Argyle Foods partnership specifically targets North American demand for certified sustainable/ethical protein (grassfed, antibiotic-free, GMO-free), suggesting SGF is beginning to position itself as capable of handling traceable, certification-backed supply chains — a meaningfully different value proposition from bulk commodity brokerage.
+
+---
+
+## Concepts & Entities
+
+| Concept | Description |
+|---------|-------------|
+| International Commodity Trader | A firm that buys and sells physical food commodities across borders on behalf of producers and buyers, without owning production infrastructure. SGF operates in this role — earning margin on price arbitrage, logistics coordination, and market access rather than on manufacturing. |
+| IQF (Individually Quick Frozen) | A freezing process that freezes individual pieces of food separately before packaging, preserving texture and allowing precise portioning. SGF offers IQF fruits and vegetables as a product category, indicating trade in processed/frozen produce rather than fresh. |
+| Wilkinson Foods International | The predecessor corporate identity of Sure Good Foods Ltd., under which the business operated from 2000 until the 2017 rebranding. The entity and operations are continuous; only the name changed. |
+| Sure-Good House Brand | The historical retail brand of the Forgan family meat-packing business in Winnipeg, Manitoba, founded by WWII veteran Jack Forgan. Co-founder David Forgan adopted the name for the rebranded trading company in 2017 as a heritage reference. |
+| HGP-Free | Hormone Growth Promotant-free — a product certification that beef was raised without synthetic growth hormones. HGP-free is a key requirement for certain export markets (notably the EU) and premium retail buyers in North America and Australia. |
+| USMEF | United States Meat Export Federation — a nonprofit trade association that develops and promotes overseas markets for US beef, pork, lamb, veal, and variety meats. SGF membership signals active engagement with US protein export flows. |
+| USAPEEC | United States Poultry and Egg Export Council — a trade association promoting export of US poultry and eggs. SGF membership indicates active involvement in US poultry export channels. |
+| Juice Concentrates and Purees | Processed fruit and vegetable products used as ingredients by food manufacturers and beverage companies. SGF's entry into this category reflects a strategic expansion beyond proteins and fresh/frozen produce into food ingredients. |
+| Pulses | Dried legumes including lentils, chickpeas, beans, and peas. SGF added pulses to its portfolio as part of diversification beyond animal proteins — a category with strong growth in plant-based and global food security contexts. |
+| Argyle Foods Group | An Australian vertically integrated beef producer offering certified grassfed, GMO-free, antibiotic-free, and HGP-free beef. SGF's 2023 partnership with Argyle is the company's most visible move into premium/certified protein supply chains. |
+
+---
+
+## Tensions & Tradeoffs
+
+- SGF's scale (est. $19.6M revenue, 60–99 employees) is modest relative to the scope of its stated operations (70+ countries, 3,200+ customers, 46,000+ tonnes annually) — either the revenue estimate significantly undercounts actual volume, or the company operates on thin per-unit margins consistent with commodity brokerage, which creates vulnerability to margin compression.
+- The 2023 Argyle partnership signals movement toward premium/certified supply chains, but SGF's core identity and infrastructure are built for commodity-grade volume trading — successfully serving certification-dependent buyers (who require traceability and documentation) alongside bulk commodity customers requires different operational disciplines.
+- SGF operates as an intermediary that adds value through relationships and logistics expertise, but this model faces structural competition from digital commodity trading platforms and direct-buy arrangements as large buyers invest in their own sourcing capabilities.
+- The company's website copyright (2021) and Wix-based build suggest limited digital investment relative to its claimed global reach — the gap between digital presence and operational scale is wide, which may reflect deliberate prioritization of relationship channels but also limits inbound discovery and credibility signaling to non-referral prospects.
+
+---
+
+## Open Questions
+
+- What is SGF's actual annual revenue and gross margin profile — does the $19.6M estimate reflect trading revenue (total transaction value) or net trading margin?
+- How many of SGF's 3,200+ customers are active (transacted in the last 12 months) vs. historical accounts, and what is revenue concentration across the customer base?
+- Does SGF hold inventory or operate purely on a pass-through/back-to-back contract model, and if it holds inventory, what is its working capital and credit structure?
+- Which specific international offices (beyond Australia and Dubai) does SGF currently operate, and what is the headcount and product focus of each?
+- How has the Argyle Foods partnership developed since the November 2023 announcement — has SGF successfully moved certified grassfed beef volume into North American channels?
+- Does SGF have any proprietary certifications (organic, Halal, Kosher, GlobalG.A.P.) that govern the products it can source and the markets it can access?
+- Who are SGF's primary competitors in the Canadian-headquartered international meat and protein trading space, and how does SGF's geographic coverage or product breadth compare?
+
+---
+
+## Sources & References
+
+- [Sure Good Foods — Homepage](https://www.suregoodfoods.com/)
+- [Sure Good Foods — About Us Page](https://www.suregoodfoods.com/aboutus)
+- [Sure Good Foods — Products Page](https://www.suregoodfoods.com/products)
+- [Sure Good Foods — Services Page](https://www.suregoodfoods.com/services)
+- [Sure Good Foods — Beef Product Page](https://www.suregoodfoods.com/beef)
+- [Sure Good Foods — IQF International Commodity Trader Page](https://www.suregoodfoods.com/international-commodity-trader-iqf)
+- [New meat trading businesses take root, following Sanger departures — Beef Central](https://www.beefcentral.com/trade/new-meat-trading-businesses-take-root-following-sanger-departures/)
+- [Beef supply chain, exporter announce commercial partnership — Beef Central](https://www.beefcentral.com/trade/beef-supply-chain-exporter-announce-commercial-partnership/)
+- [Argyle Foods Group and Sure Good Foods announce new commercial partnership](https://www.argylefoodsgroup.com.au/news/argyle-foods-group-and-sure-good-foods-announce-new-commercial-partnership)
+- [Sure Good Foods Limited — LinkedIn](https://ca.linkedin.com/company/sure-good-foods-limited)
+- [Sure Good Foods Australia — LinkedIn](https://www.linkedin.com/company/sure-good-foods-australia)
+- [Sure Good Foods — ZoomInfo Company Profile](https://www.zoominfo.com/c/sure-good-foods-ltd/412174226)
+- [Sure Good Foods Limited — Growjo Revenue and Competitors](https://growjo.com/company/Sure_Good_Foods_Limited)
+- [Sure Good Foods — Kona Equity Revenue Profile](https://www.konaequity.com/company/sure-good-foods-4864152142/)
+- [Sure Good Foods Limited — RocketReach Company Information](https://rocketreach.co/sure-good-foods-limited-profile_b4547772fc9e8678)
+- [Sure Good Foods — The Org Company Profile](https://theorg.com/org/sure-good-foods)
+- [Sure Good Foods — Crunchbase Organization Profile](https://www.crunchbase.com/organization/sure-good-foods)
+- [Ray McCague — Crunchbase Person Profile](https://www.crunchbase.com/person/ray-mccague)
+- [Sure Good Foods Australia — Food and Beverage Directory (Queensland Government)](https://foodandbeverage.hpw.qld.gov.au/details/780)
+- [Sure Good Foods Australia Pty Ltd — Panjiva Supplier Report](https://panjiva.com/Sure-Good-Foods-Australia-Pty-Ltd/88127721)
+- [Sure Good Foods Ltd — Tridge Supplier Profile](https://www.tridge.com/find-suppliers/basic/sure-good-foods-ltd)
