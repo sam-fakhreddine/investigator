@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> How do organizations using AWS Landing Zone Accelerator, IAM Identity Center federated via Microsoft Entra ID / Azure AD, and SSM Session Manager resolve the SSMSessionRunAs multi-group conflict — and how can the full pipeline (Entra ID attribute sourcing, IAM Identity Center ABAC configuration, and per-account SSM preferences) be kept in sync across a multi-account organization?
+
+---
+
+## Context
+
+Organizations using AWS Landing Zone Accelerator (LZA) to manage a multi-account AWS organization, federated through IAM Identity Center (IdC) via Microsoft Entra ID / Azure AD, rely on SSM Session Manager for server access and require Session Manager's RunAs feature to authenticate engineers as named OS users on managed EC2 instances. The SSMSessionRunAs session tag — which drives that OS username selection — depends on a three-layer pipeline: attribute sourcing in Entra ID, ABAC mapping in IAM Identity Center, and per-account SSM preferences in each member account. Engineers encounter session failures or incorrect user assignment when any of these layers is misconfigured, when an engineer belongs to multiple Entra groups with conflicting attribute emissions, or when the SSM-SessionManagerRunShell document is absent or inconsistent across accounts. Understanding this pipeline requires looking at all three layers simultaneously because LZA manages some of them declaratively, leaves others entirely outside its scope, and preserves but does not enforce RunAs values in the SSM preferences document.
+
+---
+
 ## Full Pipeline: Ownership and Sync Mechanism by Layer
 
 | Layer | What It Controls | LZA-Managed? | Correct Tool / Mechanism | Key Constraint |
@@ -16,18 +28,6 @@
 | SCP guardrail for SSM document immutability | Prevents member account admins from modifying SSM-SessionManagerRunShell after deployment | No — must be added separately | SCP denying ssm:UpdateDocument, ssm:CreateDocument, ssm:DeleteDocument on SSM-SessionManagerRunShell resource, applied at Root OU or relevant member OUs | SCP must exempt the StackSet service role and LZA pipeline role or the enforcement mechanism will block its own writes |
 
 > Two tools are required for this pipeline: LZA (for permission sets and assignments) and a supplemental IaC tool or the IdC console (for ABAC attribute configuration). LZA alone cannot configure the full pipeline.
-
----
-
-## Question
-
-> How do organizations using AWS Landing Zone Accelerator, IAM Identity Center federated via Microsoft Entra ID / Azure AD, and SSM Session Manager resolve the SSMSessionRunAs multi-group conflict — and how can the full pipeline (Entra ID attribute sourcing, IAM Identity Center ABAC configuration, and per-account SSM preferences) be kept in sync across a multi-account organization?
-
----
-
-## Context
-
-Organizations using AWS Landing Zone Accelerator (LZA) to manage a multi-account AWS organization, federated through IAM Identity Center (IdC) via Microsoft Entra ID / Azure AD, rely on SSM Session Manager for server access and require Session Manager's RunAs feature to authenticate engineers as named OS users on managed EC2 instances. The SSMSessionRunAs session tag — which drives that OS username selection — depends on a three-layer pipeline: attribute sourcing in Entra ID, ABAC mapping in IAM Identity Center, and per-account SSM preferences in each member account. Engineers encounter session failures or incorrect user assignment when any of these layers is misconfigured, when an engineer belongs to multiple Entra groups with conflicting attribute emissions, or when the SSM-SessionManagerRunShell document is absent or inconsistent across accounts. Understanding this pipeline requires looking at all three layers simultaneously because LZA manages some of them declaratively, leaves others entirely outside its scope, and preserves but does not enforce RunAs values in the SSM preferences document.
 
 ---
 

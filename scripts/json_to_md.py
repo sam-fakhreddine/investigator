@@ -89,23 +89,6 @@ def render(data: dict) -> str:
         f"",
     ]
 
-    quick_ref = data.get('quick_reference')
-    if quick_ref and quick_ref.get('columns') and quick_ref.get('rows'):
-        cols = quick_ref['columns']
-        sep  = ['---'] * len(cols)
-        lines += [
-            f"## {quick_ref.get('title', 'Quick Reference')}",
-            f"",
-            f"| {' | '.join(safe_table_cell(str(c)) for c in cols)} |",
-            f"| {' | '.join(sep)} |",
-        ]
-        for row in quick_ref['rows']:
-            cells = [safe_table_cell(str(c)) for c in row]
-            lines.append(f"| {' | '.join(cells)} |")
-        if quick_ref.get('notes'):
-            lines += ["", safe_blockquote(str(quick_ref['notes']))]
-        lines += ["", "---", ""]
-
     lines += [
         f"## Question",
         f"",
@@ -123,6 +106,23 @@ def render(data: dict) -> str:
         f"---",
         f"",
     ]
+
+    quick_ref = data.get('quick_reference')
+    if quick_ref and quick_ref.get('columns') and quick_ref.get('rows'):
+        cols = quick_ref['columns']
+        sep  = ['---'] * len(cols)
+        lines += [
+            f"## {quick_ref.get('title', 'Quick Reference')}",
+            f"",
+            f"| {' | '.join(safe_table_cell(str(c)) for c in cols)} |",
+            f"| {' | '.join(sep)} |",
+        ]
+        for row in quick_ref['rows']:
+            cells = [safe_table_cell(str(c)) for c in row]
+            lines.append(f"| {' | '.join(cells)} |")
+        if quick_ref.get('notes'):
+            lines += ["", safe_blockquote(str(quick_ref['notes']))]
+        lines += ["", "---", ""]
 
     lines += [f"## Key Findings", f""]
     for finding in data.get('key_findings', []):

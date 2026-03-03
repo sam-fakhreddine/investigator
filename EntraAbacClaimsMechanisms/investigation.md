@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> In the Entra ID to IAM Identity Center ABAC pipeline, what are the documented mechanisms for delivering user attributes (SAML claims vs SCIM sync), how do they interact, what can aws:PrincipalTag condition keys control, and can any of these mechanisms influence SSMSessionRunAs OS-level session identity?
+
+---
+
+## Context
+
+Organizations federate Microsoft Entra ID to AWS IAM Identity Center via SAML and SCIM. Two distinct pipelines deliver user attributes into the ABAC system: SAML claims emitted at authentication time and SCIM provisioning that continuously populates the IdC identity store. Once attributes reach STS as session tags, permission set IAM policies can reference them via aws:PrincipalTag condition keys. Separately, SSM Session Manager uses the SSMSessionRunAs tag to determine the OS-level username for sessions on managed Linux nodes. Understanding which attribute path controls what — and which path SSMSessionRunAs must exclusively use — is critical to reliable per-user OS identity mapping in federated environments.
+
+---
+
 ## Entra ID ABAC Pipeline — Mechanism Comparison
 
 | Mechanism | Layer | Carries Custom Attrs? | Carries SSMSessionRunAs? | Wins on Key Conflict? |
@@ -15,18 +27,6 @@
 | SSMSessionRunAs as STS session tag | SSM Agent tag read (outside IAM evaluation) | N/A — one specific key | Yes — primary per-user mechanism | N/A — SSM reads directly from principal context |
 
 > SSMSessionRunAs must be delivered exclusively via the SAML claims path (AccessControl:SSMSessionRunAs attribute in Entra). SCIM cannot carry it. aws:PrincipalTag conditions gate StartSession API access but do not influence which OS user SSM uses — that is resolved by SSM Agent reading the tag context directly, outside IAM policy evaluation.
-
----
-
-## Question
-
-> In the Entra ID to IAM Identity Center ABAC pipeline, what are the documented mechanisms for delivering user attributes (SAML claims vs SCIM sync), how do they interact, what can aws:PrincipalTag condition keys control, and can any of these mechanisms influence SSMSessionRunAs OS-level session identity?
-
----
-
-## Context
-
-Organizations federate Microsoft Entra ID to AWS IAM Identity Center via SAML and SCIM. Two distinct pipelines deliver user attributes into the ABAC system: SAML claims emitted at authentication time and SCIM provisioning that continuously populates the IdC identity store. Once attributes reach STS as session tags, permission set IAM policies can reference them via aws:PrincipalTag condition keys. Separately, SSM Session Manager uses the SSMSessionRunAs tag to determine the OS-level username for sessions on managed Linux nodes. Understanding which attribute path controls what — and which path SSMSessionRunAs must exclusively use — is critical to reliable per-user OS identity mapping in federated environments.
 
 ---
 

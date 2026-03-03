@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> In the Entra ID to IAM Identity Center ABAC pipeline, what does the SAML claims path cover, how does it interact with SCIM sync when both specify the same attribute key, and what are the documented implications for SSMSessionRunAs attribute delivery?
+
+---
+
+## Context
+
+Organizations federate Microsoft Entra ID to AWS IAM Identity Center (IdC) via SAML. IdC supports ABAC (Attributes for Access Control), which passes user attributes as STS session tags that condition IAM policy evaluation. The SSMSessionRunAs session tag controls which OS-level username SSM Session Manager uses when starting a session on a managed node. There are two distinct paths for delivering ABAC attributes to IdC: (1) SAML claims, emitted by the Entra enterprise app at authentication time using the https://aws.amazon.com/SAML/Attributes/AccessControl: prefix; and (2) the Attributes for Access Control configuration in the IdC console, which reads values from the IdC identity store populated by SCIM sync. Understanding which path wins, what each path can carry, and the structural difference for SSMSessionRunAs is essential to reliably routing the correct OS username into STS session tags.
+
+---
+
 ## SAML Claims vs SCIM Sync: Attribute Delivery Comparison
 
 | Dimension | SAML Claims Path | SCIM / Identity Store Path |
@@ -19,18 +31,6 @@
 | Value freshness | Current Entra attribute value at login time | Value at last SCIM sync cycle (can lag) |
 
 > Precedence rule source: AWS IAM Identity Center User Guide (attributesforaccesscontrol.html): 'In scenarios where the same attributes are coming to IAM Identity Center through SAML and SCIM, the SCIM attributes value take precedence in access control decisions.' For SSMSessionRunAs, use the SAML path exclusively — SCIM cannot carry this attribute.
-
----
-
-## Question
-
-> In the Entra ID to IAM Identity Center ABAC pipeline, what does the SAML claims path cover, how does it interact with SCIM sync when both specify the same attribute key, and what are the documented implications for SSMSessionRunAs attribute delivery?
-
----
-
-## Context
-
-Organizations federate Microsoft Entra ID to AWS IAM Identity Center (IdC) via SAML. IdC supports ABAC (Attributes for Access Control), which passes user attributes as STS session tags that condition IAM policy evaluation. The SSMSessionRunAs session tag controls which OS-level username SSM Session Manager uses when starting a session on a managed node. There are two distinct paths for delivering ABAC attributes to IdC: (1) SAML claims, emitted by the Entra enterprise app at authentication time using the https://aws.amazon.com/SAML/Attributes/AccessControl: prefix; and (2) the Attributes for Access Control configuration in the IdC console, which reads values from the IdC identity store populated by SCIM sync. Understanding which path wins, what each path can carry, and the structural difference for SSMSessionRunAs is essential to reliably routing the correct OS username into STS session tags.
 
 ---
 

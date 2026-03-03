@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> Does AWS Systems Manager Just-in-Time Node Access (JITNA) integrate with IAM Identity Center / Entra ID federation, and does it work alongside or replace the SSMSessionRunAs model for temporary elevated production access without CyberArk or a custom approval workflow?
+
+---
+
+## Context
+
+The team uses Entra ID federated to AWS IAM Identity Center (IdC). They use SSM Session Manager with the SSMSessionRunAs session tag to map federated users to named Linux OS accounts. A stakeholder asked whether AWS JITNA could provide a just-in-time temporary elevated prod access workflow — developer requests access, gets approved (auto or via Slack/Teams), connects — without building a custom approval system or adopting CyberArk. Key unknowns: whether JITNA explicitly supports IdC-federated users, whether SSMSessionRunAs still functions inside JITNA sessions, what approval models exist, multi-account constraints, cost, and the migration path from Session Manager.
+
+---
+
 ## JITNA Capability and Compatibility Summary
 
 | Dimension | Finding | Detail |
@@ -21,18 +33,6 @@
 | Session retention | 1 year | Access request records retained for 1 year; EventBridge events on status changes |
 
 > SSMSessionRunAs compatibility is architecturally incompatible with JITNA by default. JITNA credentials come from a fresh AssumeRole into a JITNA-managed role, and STS session tags are non-transitive across role chains by default. The SSMSessionRunAs principal tag from the original Entra ID / IdC session does not propagate automatically. Empirical validation is required before any production rollout that relies on per-user OS identity.
-
----
-
-## Question
-
-> Does AWS Systems Manager Just-in-Time Node Access (JITNA) integrate with IAM Identity Center / Entra ID federation, and does it work alongside or replace the SSMSessionRunAs model for temporary elevated production access without CyberArk or a custom approval workflow?
-
----
-
-## Context
-
-The team uses Entra ID federated to AWS IAM Identity Center (IdC). They use SSM Session Manager with the SSMSessionRunAs session tag to map federated users to named Linux OS accounts. A stakeholder asked whether AWS JITNA could provide a just-in-time temporary elevated prod access workflow — developer requests access, gets approved (auto or via Slack/Teams), connects — without building a custom approval system or adopting CyberArk. Key unknowns: whether JITNA explicitly supports IdC-federated users, whether SSMSessionRunAs still functions inside JITNA sessions, what approval models exist, multi-account constraints, cost, and the migration path from Session Manager.
 
 ---
 

@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> In a hybrid Entra ID + on-prem Active Directory environment using SSM Session Manager SSMSessionRunAs on EC2 Linux, what is the minimum administration surface required for (a) AD group management and (b) Linux OS user provisioning, is any of it architecturally eliminable, and what developer-friendly automation patterns are documented for what cannot be eliminated?
+
+---
+
+## Context
+
+The team are software developers doing AWS work, allergic to traditional sysadmin and IAM administration. The environment is hybrid: on-prem Windows Active Directory synced to Microsoft Entra ID via Entra Connect. SSMSessionRunAs resolves a named Linux OS user; that user must exist on the instance or in the domain at session start. Two patterns exist: local OS users in /etc/passwd, or SSSD domain-joined instances where identity resolves from AD. Group membership in AD controls IdC permission set assignment, which gates who can start sessions. The investigation covers: whether AD group management can be self-serviced by developers without engaging a Windows AD admin; whether Linux OS user provisioning can be eliminated or automated without a Linux sysadmin; and whether combining SSSD + Entra self-service removes both burdens simultaneously.
+
+---
+
 ## Administration Surface Summary
 
 | Dimension | Pattern | Admin Surface Eliminated? | Residual Burden | Best Automation Path |
@@ -19,18 +31,6 @@
 | Linux OS user provisioning | SSSD domain join — user resolved from AD at session time | Yes completely — no local /etc/passwd entry required | Domain join itself is a one-time per-image or per-instance operation (already investigated in SssdEntraLinuxEntitlements); AD user account must exist in AD | SSSD is a complete elimination of the Linux OS user provisioning burden when domain join is in place |
 
 > The lowest-administration path for developer teams is SSSD domain join (eliminates Linux user provisioning) combined with cloud-native Entra security groups managed via Terraform azuread or Entra self-service (avoids Windows AD admin for group membership). Both enablers require one-time admin setup but no recurring sysadmin involvement.
-
----
-
-## Question
-
-> In a hybrid Entra ID + on-prem Active Directory environment using SSM Session Manager SSMSessionRunAs on EC2 Linux, what is the minimum administration surface required for (a) AD group management and (b) Linux OS user provisioning, is any of it architecturally eliminable, and what developer-friendly automation patterns are documented for what cannot be eliminated?
-
----
-
-## Context
-
-The team are software developers doing AWS work, allergic to traditional sysadmin and IAM administration. The environment is hybrid: on-prem Windows Active Directory synced to Microsoft Entra ID via Entra Connect. SSMSessionRunAs resolves a named Linux OS user; that user must exist on the instance or in the domain at session start. Two patterns exist: local OS users in /etc/passwd, or SSSD domain-joined instances where identity resolves from AD. Group membership in AD controls IdC permission set assignment, which gates who can start sessions. The investigation covers: whether AD group management can be self-serviced by developers without engaging a Windows AD admin; whether Linux OS user provisioning can be eliminated or automated without a Linux sysadmin; and whether combining SSSD + Entra self-service removes both burdens simultaneously.
 
 ---
 

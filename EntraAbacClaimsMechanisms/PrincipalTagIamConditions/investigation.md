@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> In the Entra ID → IAM Identity Center ABAC pipeline, what can aws:PrincipalTag condition keys in permission set IAM policies control, and can they influence SSMSessionRunAs behavior or OS-level session identity?
+
+---
+
+## Context
+
+Organizations federate Entra ID to AWS IAM Identity Center. SAML claims propagate as STS session tags accessible in IAM policies as aws:PrincipalTag/<key>. Permission sets include inline policies using these as condition keys. The question is what layer aws:PrincipalTag operates at, what resource-level or session-level control it enables, and specifically whether IAM policy conditions using aws:PrincipalTag can influence what OS user a federated user lands as in SSM Session Manager (SSMSessionRunAs).
+
+---
+
 ## aws:PrincipalTag Control Surface vs SSMSessionRunAs Mechanism
 
 | Mechanism | Layer | Can Influence SSMSessionRunAs? | Notes |
@@ -15,18 +27,6 @@
 | Session Manager Preferences (account-level) | SSM configuration (fallback default) | Yes — as fallback only | Applies when no SSMSessionRunAs tag is present on the principal |
 
 > SSMSessionRunAs and aws:PrincipalTag share the same STS session tag infrastructure. SSM reads SSMSessionRunAs directly from the principal tag context — not via an IAM policy Condition. aws:PrincipalTag in a policy Condition only gates the StartSession API call itself.
-
----
-
-## Question
-
-> In the Entra ID → IAM Identity Center ABAC pipeline, what can aws:PrincipalTag condition keys in permission set IAM policies control, and can they influence SSMSessionRunAs behavior or OS-level session identity?
-
----
-
-## Context
-
-Organizations federate Entra ID to AWS IAM Identity Center. SAML claims propagate as STS session tags accessible in IAM policies as aws:PrincipalTag/<key>. Permission sets include inline policies using these as condition keys. The question is what layer aws:PrincipalTag operates at, what resource-level or session-level control it enables, and specifically whether IAM policy conditions using aws:PrincipalTag can influence what OS user a federated user lands as in SSM Session Manager (SSMSessionRunAs).
 
 ---
 

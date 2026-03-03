@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> In a hybrid Entra ID + on-prem Active Directory environment, what does the Pulumi @pulumi/azuread provider support for managing Entra group membership for IAM Identity Center permission set assignments — specifically for cloud-native groups, SOA-converted groups, and the developer-managed PR-based workflow — and what are its documented limitations compared to the Terraform hashicorp/azuread provider?
+
+---
+
+## Context
+
+The team uses AWS IAM Identity Center federated via Entra ID. Groups in Entra ID are assigned to IAM Identity Center permission sets, making group membership the access control plane for AWS. The environment is hybrid: on-prem Windows Active Directory synced to Entra via Entra Connect. Developers want to manage group membership without involving a Windows AD admin. Prior research established that on-prem-synced groups (onPremisesSyncEnabled=true) are cloud write-blocked — Graph API, Terraform azuread, and Pulumi azuread all fail for these groups. The viable path is cloud-native Entra security groups, with optional group writeback to on-prem AD via Entra Cloud Sync. A SOA conversion path exists (onPremisesSyncBehavior / isCloudManaged) that converts formerly-synced groups to cloud-managed. Terraform hashicorp/azuread is the team's current tool; they want to evaluate Pulumi @pulumi/azuread as a TypeScript-native alternative.
+
+---
+
 ## Pulumi @pulumi/azuread — Capability Matrix for Hybrid Entra + IAM Identity Center
 
 | Capability | Pulumi @pulumi/azuread | Notes |
@@ -23,18 +35,6 @@
 | Access package (Entitlement Mgmt) | Partial — uses /beta Graph endpoint | Microsoft flagged /beta/identityGovernance as unsupported; GA endpoint pending upstream Terraform fix |
 
 > Graph API permissions needed: Group.ReadWrite.All (or Directory.ReadWrite.All) for group membership. Group-OnPremisesSyncBehavior.ReadWrite.All is additionally required only if performing SOA conversion, which is a one-time admin action outside the IaC workflow.
-
----
-
-## Question
-
-> In a hybrid Entra ID + on-prem Active Directory environment, what does the Pulumi @pulumi/azuread provider support for managing Entra group membership for IAM Identity Center permission set assignments — specifically for cloud-native groups, SOA-converted groups, and the developer-managed PR-based workflow — and what are its documented limitations compared to the Terraform hashicorp/azuread provider?
-
----
-
-## Context
-
-The team uses AWS IAM Identity Center federated via Entra ID. Groups in Entra ID are assigned to IAM Identity Center permission sets, making group membership the access control plane for AWS. The environment is hybrid: on-prem Windows Active Directory synced to Entra via Entra Connect. Developers want to manage group membership without involving a Windows AD admin. Prior research established that on-prem-synced groups (onPremisesSyncEnabled=true) are cloud write-blocked — Graph API, Terraform azuread, and Pulumi azuread all fail for these groups. The viable path is cloud-native Entra security groups, with optional group writeback to on-prem AD via Entra Cloud Sync. A SOA conversion path exists (onPremisesSyncBehavior / isCloudManaged) that converts formerly-synced groups to cloud-managed. Terraform hashicorp/azuread is the team's current tool; they want to evaluate Pulumi @pulumi/azuread as a TypeScript-native alternative.
 
 ---
 

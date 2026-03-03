@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> In a hybrid Entra ID + AWS IAM Identity Center environment, what TypeScript-native options exist for managing Entra group membership declaratively with state and drift tracking — without installing or invoking a separate IaC CLI tool (no `pulumi up`, no `terraform apply`)?
+
+---
+
+## Context
+
+The team already uses TypeScript and wants to manage Entra cloud-native group membership as code with state tracking and drift detection, where groups are assigned to IAM Identity Center permission sets. Prior research confirmed Pulumi @pulumi/azuread and Terraform hashicorp/azuread are viable for this use case, but both require a separate CLI binary and a state backend. The team wants to know whether a credible TypeScript-native path exists — npm packages only, no out-of-band toolchain install — that provides equivalent guarantees.
+
+---
+
 ## TypeScript-Native Entra Group Management — Option Comparison
 
 | Option | State file | Drift detection | CLI required | Notes |
@@ -16,18 +28,6 @@
 | SST / Nitric / other TS frameworks | AWS only (SST) / limited Azure (Nitric) | N/A | No for SST; depends for Nitric | Neither supports Entra ID group membership management as of early 2026 |
 
 > No production-ready TypeScript npm package provides Pulumi/Terraform-equivalent state + drift detection for Entra groups without a CLI binary. The Pulumi Automation API is the closest answer, but the pulumi binary must still be installed. Graph SDK alone is an imperative API; turning it into a declarative reconciler requires engineering a custom state layer.
-
----
-
-## Question
-
-> In a hybrid Entra ID + AWS IAM Identity Center environment, what TypeScript-native options exist for managing Entra group membership declaratively with state and drift tracking — without installing or invoking a separate IaC CLI tool (no `pulumi up`, no `terraform apply`)?
-
----
-
-## Context
-
-The team already uses TypeScript and wants to manage Entra cloud-native group membership as code with state tracking and drift detection, where groups are assigned to IAM Identity Center permission sets. Prior research confirmed Pulumi @pulumi/azuread and Terraform hashicorp/azuread are viable for this use case, but both require a separate CLI binary and a state backend. The team wants to know whether a credible TypeScript-native path exists — npm packages only, no out-of-band toolchain install — that provides equivalent guarantees.
 
 ---
 

@@ -5,6 +5,18 @@
 
 ---
 
+## Question
+
+> Which RDS DB instance events are published natively to EventBridge without an Event Subscription, and do create/restore events require a CloudTrail-based EventBridge rule as a workaround?
+
+---
+
+## Context
+
+Engineers building automation around RDS instance lifecycle (creation, restoration, deletion, stop) need to know which events they can intercept via a native EventBridge rule (source: aws.rds, detail-type: RDS DB Instance Event) and which require a different pattern. A known complaint is that EventBridge rules with source aws.rds appear to fire for deletion and stop events but never for creation or restore events, prompting the hypothesis that creation events are either not published natively or arrive with unstable Message field values that cause content filters to never match.
+
+---
+
 ## RDS Event Coverage by Rule Pattern
 
 | Event | RDS Event ID | Native to EventBridge (no subscription) | Correct rule pattern | Instance state when rule fires |
@@ -16,18 +28,6 @@
 | Restored from snapshot | RDS-EVENT-0043 (snapshot) / RDS-EVENT-0019 (instance) | Ambiguous — same best-effort caveat; no sample event shown | source: aws.rds / detail-type: AWS API Call via CloudTrail + eventSource: rds.amazonaws.com + eventName: RestoreDBInstanceFromDBSnapshot (requires CloudTrail trail) | creating |
 
 > All native RDS events use source: aws.rds. CloudTrail-based RDS events also use source: aws.rds — not aws.cloudtrail. A CloudTrail trail with logging enabled is required for AWS API Call via CloudTrail events to reach EventBridge.
-
----
-
-## Question
-
-> Which RDS DB instance events are published natively to EventBridge without an Event Subscription, and do create/restore events require a CloudTrail-based EventBridge rule as a workaround?
-
----
-
-## Context
-
-Engineers building automation around RDS instance lifecycle (creation, restoration, deletion, stop) need to know which events they can intercept via a native EventBridge rule (source: aws.rds, detail-type: RDS DB Instance Event) and which require a different pattern. A known complaint is that EventBridge rules with source aws.rds appear to fire for deletion and stop events but never for creation or restore events, prompting the hypothesis that creation events are either not published natively or arrive with unstable Message field values that cause content filters to never match.
 
 ---
 
