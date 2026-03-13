@@ -1,0 +1,145 @@
+# Investigation: Wireless S/PDIF to eARC Bridge — Hypothesis Verification
+
+**Date:** 2026-03-13
+**Status:** Complete
+
+---
+
+## Question
+
+> Is the wireless S/PDIF to eARC bridge hypothesis technically feasible and are its core claims accurate — covering RF transport bandwidth, STM32 SPDIFRX peripheral capabilities, clock recovery approach, eARC output IC selection, component specifications, and market positioning?
+
+---
+
+## Context
+
+A proposed DIY two-board system transmits Dolby Digital 5.1/DTS surround sound wirelessly from a projector's TOSLINK output to a soundbar's eARC input, solving the projector-topology problem where ceiling-mounted projectors and front-mounted soundbars cannot be connected without unsightly cable runs. The design extracts compressed audio via S/PDIF, transports it over a 2.4 GHz nRF52840 proprietary radio link, recovers timing with a VCXO discipline loop, and outputs via an eARC IC over HDMI. The hypothesis required verification across six technical domains because errors in any one — wrong IC, insufficient bandwidth, impossible clock recovery — would invalidate the architecture before prototyping.
+
+---
+
+## Sub-Topic Verification Summary
+
+| Sub-topic | Core Claim | Verdict | Key Correction/Risk |
+| --- | --- | --- | --- |
+| RF Transport | nRF52840 at ~1.5 Mbps carries DD5.1 comfortably, DTS marginally | CONFIRMED WITH CAVEAT | DD5.1 confirmed (40% margin); DTS at 1509 Kbps is marginal to infeasible (89-116% of throughput) |
+| STM32 SPDIFRX | STM32F446 has hardware S/PDIF receiver with BMC decode in silicon | CONFIRMED | Peripheral confirmed on F446/F469/F479; async clock domain to SAI requires ASRC or external PLL |
+| Clock Recovery | 40 ppm drift requires VCXO + Kalman filter discipline loop | CONFIRMED WITH CAVEAT | Drift math and ASRC incompatibility with IEC-61937 confirmed; Kalman filter may be over-engineered vs PI controller; ~5s lock time optimistic (2-10s realistic) |
+| eARC Output | IT6803 ITE Tech handles eARC negotiation in hardware | CORRECTED | IT6803 does not exist; correct part is IT6621 (eARC TX) or Lattice SiI9438; eARC uses CMDC not CEC |
+| Component Specs | BOM of ~$67 core with specific VCXO and ADC parts | CORRECTED | TXC 7M is a crystal (not VCXO), NDK NZ2520SDA is a fixed XO (not VCXO), PCM1808 is TSSOP-14 (not SSOP-28); BOM estimate broadly correct at $60-75 |
+| Market Landscape | No commercial product solves wireless projector-to-soundbar multichannel audio | CONFIRMED WITH CAVEAT | Marmitek Audio Anywhere 685 was a close match but is discontinued; no current product exists; market is real but niche |
+
+> Three hypothesis errors require correction before prototyping: non-existent eARC IC (IT6803), two misidentified VCXO parts (TXC 7M, NDK NZ2520SDA), and one wrong package (PCM1808 SSOP-28 vs actual TSSOP-14). All errors have known, available corrections.
+
+---
+
+## Key Findings
+
+- The IT6803 HDMI TX IC does not exist in ITE Tech's product catalog — the IT680x series are HDMI receivers, not transmitters. The correct ITE eARC transmitter is the IT6621 (32-pin QFN, I2S input, 98 Mbps DMAC). The Lattice SiI9438 is a viable alternative with better public documentation.
+- Neither the TXC 7M nor the NDK NZ2520SDA is a VCXO — the TXC 7M is a passive quartz crystal with no oscillator circuit, and the NDK NZ2520SDA is a fixed-frequency SPXO with no voltage control input. Clock recovery requires a true VCXO such as the SiTime SiT3807 ($5-10) or Abracon ASVV.
+- The PCM1808 ADC is correctly identified as 24-bit/96kHz with I2S output, but the hypothesis states SSOP-28 package when the actual package is TSSOP-14 (14 pins, not 28) — this would produce an incorrect PCB footprint if not corrected before layout.
+- DTS core at 1509.75 Kbps consumes 89-116% of the nRF52840's achievable throughput range (1.3-1.7 Mbps), making full-rate DTS marginal to infeasible without a custom ACK-less unidirectional protocol — the original assessment of 'marginal' is confirmed but may understate the risk.
+- Dolby Digital 5.1 at 640 Kbps uses only 38-49% of the nRF52840's achievable throughput, confirming a comfortable margin for wireless transport of the most common surround format.
+- ASRC fundamentally cannot process IEC-61937 compressed bitstreams because it operates by interpolating between PCM sample values — compressed audio encodes frequency-domain data where every bit is structurally significant, making VCXO-based clock recovery the only viable approach.
+- The STM32F446 SPDIFRX peripheral performs BMC decoding, preamble detection, and symbol clock extraction entirely in hardware, eliminating firmware bit-banging. Within the F4 family, SPDIFRX is present only on the F446, F469, and F479 lines.
+- eARC negotiation uses a dedicated Common Mode Data Channel (CMDC), not CEC as the hypothesis claimed — eARC operates independently of CEC, which changes firmware assumptions but is fully handled by dedicated ICs like the IT6621 or SiI9438.
+- The Marmitek Audio Anywhere 685 proves the wireless S/PDIF bridge concept is technically feasible — it wirelessly transmitted DD 5.1 and DTS bitstreams via TOSLINK at 2.4 GHz with 12ms latency. However, it appears discontinued with no eARC output, confirming both prior art and an unserved market gap.
+- The 40 ppm worst-case crystal mismatch calculation is correct (two +/-20 ppm crystals diverging in opposite directions), producing 1.92 samples/second drift at 48 kHz — sufficient to cause audible glitches within 10 seconds without active clock correction.
+- 24.576 MHz VCXOs with +/-100 to +/-200 ppm pull range are commercially available (SiTime SiT3807, Abracon ASVV), confirming hardware feasibility of the clock recovery approach despite the specific parts cited in the hypothesis being wrong.
+- The SPDIFRX peripheral does not include a clock recovery PLL — the incoming S/PDIF clock domain is asynchronous to the MCU system clock, requiring either firmware ASRC or an external clock recovery IC (DIR9001, SRC4392) to bridge to SAI output without buffer drift.
+- The overall BOM estimate of ~$67 core / $97-120 total remains broadly correct at $60-75 core after correcting component selections and updated pricing — the Nucleo-F446RE is actually cheaper than estimated ($14.85 vs $20) while the nRF52840 module is slightly higher ($5.50 vs $4).
+
+---
+
+## Concepts & Entities
+
+| Concept | Description |
+|---------|-------------|
+| IEC 61937 Bitstream Transport | Standard for conveying compressed multichannel audio (Dolby Digital, DTS) over IEC 60958 (S/PDIF) and HDMI interfaces. Every bit in the payload is codec-significant — the bitstream must pass through untouched without PCM-style interpolation or sample rate conversion. |
+| eARC (Enhanced Audio Return Channel) | HDMI 2.1 feature providing 37 Mbps audio bandwidth from sink to source using dedicated DMAC and CMDC channels independent of CEC. Supports DD, DD+, TrueHD, Atmos, DTS-HD MA, and uncompressed PCM up to 7.1ch/192kHz. |
+| SPDIFRX Hardware Peripheral | Dedicated receiver on select STM32 MCUs (F446, F469, F479, F7, H7, MP1) that decodes biphase mark coding, detects preambles, and separates audio data from channel status in silicon. Does not include a clock recovery PLL. |
+| VCXO (Voltage-Controlled Crystal Oscillator) | Oscillator whose frequency is adjustable over a narrow range (+/-25 to +/-200 ppm) via a DC control voltage. Essential for clock recovery when bridging asynchronous audio domains. Not to be confused with passive crystals (no oscillator) or fixed XOs (no voltage control). |
+| nRF52840 Proprietary Radio | Nordic Semiconductor's 2.4 GHz radio supporting 2 Mbps proprietary mode with configurable packet format. Achieves ~1.0 Mbps with ESB (ACKs) or ~1.7 Mbps unidirectional with max payloads — protocol design determines whether DTS fits. |
+| ASRC (Asynchronous Sample Rate Conversion) | Converts PCM audio between independent clock domains by interpolating sample values. Cannot operate on IEC-61937 compressed bitstreams where bits encode frequency-domain codec data rather than waveform amplitudes. |
+| Projector Topology Problem | Physical separation of ceiling/rear-mounted projector from front-mounted soundbar (3-10m) with no cable path. No mainstream wireless product bridges this gap with multichannel audio — mainstream solutions are stereo-only (Bluetooth, AirPlay) or closed-ecosystem (WiSA). |
+| CMDC (Common Mode Data Channel) | Bidirectional control channel in eARC for discovery, capability exchange, and heartbeat. Operates independently of CEC on the HEAC pin pair (HDMI pins 14/19). Dedicated eARC ICs handle CMDC autonomously. |
+| Clock Discipline (Buffer-Fill VCXO Loop) | Technique from professional audio networking (Dante, AES67) where buffer occupancy drives a VCXO control voltage to match remote clock rate. Avoids ASRC latency and preserves bit-perfect compressed audio transport. A PI controller may suffice over a Kalman filter for this use case. |
+| Enhanced ShockBurst (ESB) | Nordic's lightweight proprietary protocol providing packet buffering, ACK, and retransmission. At 2 Mbps PHY, ESB achieves ~1 Mbps application throughput due to ACK overhead — removing ACKs doubles throughput but sacrifices error recovery. |
+
+---
+
+## Tensions & Tradeoffs
+
+- DTS full-rate at 1509 Kbps sits at the boundary of nRF52840 capability (89-116% of throughput range), creating a binary pass/fail situation with zero margin for FEC or RF interference — unlike DD5.1 which has 40%+ headroom. The design must decide whether DTS is a hard requirement or stretch goal.
+- The SPDIFRX peripheral decodes S/PDIF in hardware but lacks a clock recovery PLL, while ASRC cannot process compressed bitstreams — this forces the design into a VCXO discipline loop that adds BOM cost, firmware complexity, and a 2-10 second initial lock time.
+- VCXO pull range trades off against phase noise: wider tuning (+/-200 ppm) provides more frequency correction headroom but degrades clock jitter, which directly affects S/PDIF output quality. The optimal pull range (+/-50 to +/-100 ppm) depends on measured wireless transport jitter.
+- The IT6803 non-existence and VCXO misidentification mean three key components must be substituted before PCB layout — the corrections are straightforward (IT6621/SiI9438, SiT3807/ASVV, TSSOP-14 footprint) but any one missed would produce a non-functional board.
+- Removing ACKs from the nRF52840 protocol doubles throughput (enabling DTS) but means packet loss directly causes audio glitches — for compressed bitstreams, a dropped packet can corrupt an entire codec frame, causing decoder mute rather than a minor click.
+- The Marmitek Audio Anywhere 685 proves technical feasibility but its discontinuation suggests the market may be too small for a commercial product — the DIY project must accept niche demand and potential difficulty sourcing specialty ICs (IT6621 may require NDA/direct engagement with ITE).
+- Buffer depth for clock recovery trades off against AV sync latency: deeper buffers absorb wireless jitter and give the discipline loop time to converge, but add delay on top of RF transport latency. The acceptable latency budget for lip-sync (<40-80ms perceptible threshold) constrains buffer sizing.
+- TOSLINK modules TORX173/TOTX173 are functionally correct but carry OBSOLETE lifecycle status — designing around discontinued parts risks supply chain disruption for a new build, though remaining stock may suffice for prototyping.
+
+---
+
+## Open Questions
+
+- What is the measured nRF52840 unidirectional streaming throughput with 252-byte payloads and no ACKs in a typical home environment with active Wi-Fi — and does it reliably exceed 1510 Kbps for full-rate DTS?
+- Which eARC IC should be selected — IT6621 (standalone eARC TX, NDA likely required) or Lattice SiI9438 (eARC TX companion IC, better documented) — and are either available at prototype quantities through standard distributors?
+- What specific 24.576 MHz VCXO will replace the misidentified parts, and does its phase noise specification meet S/PDIF jitter requirements (< 50 ns UI-referenced) at the required pull range?
+- Should the design target half-rate DTS (754 Kbps, used on most DTS DVDs) as the supported DTS tier rather than full-rate (1510 Kbps), given the marginal RF bandwidth — and what percentage of real-world DTS content uses half-rate?
+- What is the minimum viable clock recovery implementation — PI controller vs Kalman filter — and what is the measured convergence time with realistic wireless transport jitter?
+- Does the project need an eARC TX (sending audio from a sink device) or eARC RX (receiving audio on a source device), given that eARC TX/RX naming follows the audio return direction which is counterintuitive?
+- Can lightweight FEC (Reed-Solomon or XOR parity) protect compressed audio streams within the remaining bandwidth margin above the codec bitrate, or does FEC overhead push total required bandwidth beyond nRF52840 capability?
+- How do popular consumer soundbars (Sonos Arc, Samsung HW-Q series, Bose) actually handle a single dropped S/PDIF frame during IEC-61937 compressed playback — do they mute, glitch, or silently resync?
+
+---
+
+## Sources & References
+
+- [Nordic Semiconductor nRF52840 Product Specification — RADIO peripheral](https://docs.nordicsemi.com/bundle/ps_nrf52840/page/radio.html)
+- [Espressif ESP-NOW FAQ — Throughput measurements](https://docs.espressif.com/projects/esp-faq/en/latest/application-solution/esp-now.html)
+- [Espressif Developer Blog — ESP-NOW for Outdoor Applications (throughput vs distance)](https://developer.espressif.com/blog/esp-now-for-outdoor-applications/)
+- [Microsoft Learn — Representing Formats for IEC 61937 Transmissions (S/PDIF container rates)](https://learn.microsoft.com/en-us/windows/win32/coreaudio/representing-formats-for-iec-61937-transmissions)
+- [ETSI TS 102 114 — DTS Coherent Acoustics specification (bitrate range 32-6144 Kbps)](https://www.etsi.org/deliver/etsi_ts/102100_102199/102114/01.02.01_60/ts_102114v010201p.pdf)
+- [S/PDIF Free Space Digital Audio Optical Link — bitrate calculations at 48 kHz](https://www.jensign.com/SPDIFLink/)
+- [Nordic DevZone — Intro to ShockBurst/Enhanced ShockBurst (ESB throughput calculations)](https://devzone.nordicsemi.com/nordic/nordic-blog/b/blog/posts/intro-to-shockburstenhanced-shockburst)
+- [AN5073 - Receiving S/PDIF audio stream with the STM32F4/F7/H7 Series (ST Application Note, Rev 2.0)](https://www.st.com/resource/en/application_note/an5073-receiving-spdif-audio-stream-with-the-stm32f4f7h7-series-stmicroelectronics.pdf)
+- [STM32F446xC/E Datasheet (DS10693, Rev 9)](https://www.st.com/resource/en/datasheet/stm32f446re.pdf)
+- [RM0390 Reference Manual - STM32F446xx advanced ARM-based 32-bit MCUs](https://www.st.com/resource/en/reference_manual/dm00135183-stm32f446xx-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)
+- [SPDIFRX internal peripheral - STM32 MPU Wiki](https://wiki.st.com/stm32mpu/wiki/SPDIFRX_internal_peripheral)
+- [Software STM32 S/PDIF decoder (jeddelog) - demonstrates L-series lacks hardware SPDIFRX](https://jeddelog.com/posts/soft-spdif/)
+- [SPDIF RX async clocks question - EEVblog Forum](https://www.eevblog.com/forum/microcontrollers/spdif-rx-async-clocks-question-%28spdifrx-on-stm32-anyone-tried%29/)
+- [RM0386 Reference Manual - STM32F469xx and STM32F479xx](https://www.st.com/resource/en/reference_manual/dm00127514-stm32f469xx-and-stm32f479xx-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf)
+- [F446 documentation: RCC frequency limit of dedicated SPDIF-RX clock - ST Community](https://community.st.com/t5/stm32-mcus-embedded-software/f446-documentation-rcc-frequency-limit-of-dedicated-spdif-rx/td-p/377718)
+- [SiTime SiT3807 MEMS VCXO Product Page](https://www.sitime.com/products/voltage-controlled-oscillators/sit3807)
+- [RFC 5905 - Network Time Protocol Version 4: Protocol and Algorithms Specification](https://datatracker.ietf.org/doc/html/rfc5905)
+- [NTP Clock Discipline Algorithm (Mills, University of Delaware)](https://www.eecis.udel.edu/~mills/ntp/html/discipline.html)
+- [Are PLLs Dead? Kalman Filter-Based Techniques for Digital Carrier Synchronization (IEEE)](https://ieeexplore.ieee.org/document/8039260/)
+- [NTP Clock State Machine Documentation](https://www.ntp.org/documentation/4.2.8-series/clock/)
+- [DSPRelated: Fixing Sample Rate Error/Mismatch (Buffer-Fill Clock Recovery Discussion)](https://www.dsprelated.com/thread/7564/fixing-sample-rate-error-mismatch)
+- [ITE Tech Product Catalog — Video Link Category](https://www.ite.com.tw/en/product/cate1)
+- [ITE IT6621 Product Page — ARC/eARC Transmitter with Audio MUX](https://www.ite.com.tw/en/product/cate1/IT6621)
+- [ITE IT6622 Product Page — HDMI 1.4 Tx with eARC RX and Embedded MCU](https://www.ite.com.tw/en/product/cate1/IT6622)
+- [HDMI.org — Enhanced Audio Return Channel (eARC) Specification Overview](https://www.hdmi.org/spec2sub/enhancedaudioreturnchannel)
+- [DPL Labs — HDMI eARC Detailed Technical Exploration (Physical Layer, CMDC, DMAC)](https://dpllabs.com/hdmis-enhanced-audio-return-channel-earc-detailed-technical-exploration/)
+- [Granite River Labs — HDMI 2.1 eARC Compliance Testing](https://www.graniteriverlabs.com/en-us/technical-blog/hdmi-earc-compliance-test)
+- [Lattice Semiconductor — HDMI 2.1 eARC Transmitter/Receiver Product Page](https://www.latticesemi.com/en/Products/ASSPs/HDMI21eARC)
+- [Dolby — HDMI 2.1 ARC and eARC Explained (Audio Format Support)](https://www.dolby.com/experience/home-entertainment/articles/hdmi-2.1-arc-and-earc-explained)
+- [TI PCM1808 Product Page — 24-bit 96kHz Stereo ADC](https://www.ti.com/product/PCM1808)
+- [PCM1808 Datasheet (TI SLES167)](https://www.ti.com/lit/gpn/PCM1808)
+- [NDK NZ2520SDA Crystal Oscillator Product Page](https://www.ndk.com/en/products/lineup/crystal-oscillator/NZ2520SDA.html)
+- [Abracon ASVV Series VCXO Datasheet](https://abracon.com/Oscillators/ASVV.pdf)
+- [STM32 Timer Encoder Mode — DeepBlue Embedded Tutorial](https://deepbluembedded.com/stm32-timer-encoder-mode-stm32-rotary-encoder-interfacing/)
+- [LCSC PCM1808PWR Listing (C55513) — Pricing and Stock](https://www.lcsc.com/product-detail/C55513.html)
+- [LCSC E73-2G4M08S1C Listing (C356849) — Pricing and Stock](https://www.lcsc.com/product-detail/C356849.html)
+- [Ebyte E73-2G4M08S1C nRF52840 Module Product Page](https://www.cdebyte.com/products/E73-2G4M08S1C)
+- [STMicroelectronics NUCLEO-F446RE Product Page](https://www.st.com/en/evaluation-tools/nucleo-f446re.html)
+- [WiSA SoundSend Wireless Audio Transmitter - Official Product Page](https://www.wisatechnologies.com/soundsend)
+- [WiSA-Certified Soundbars - Official Product Listing](https://www.wisatechnologies.com/soundbars)
+- [HDFury 4K Arcana 18Gbps - Official Product Page](https://hdfury.com/product/4k-arcana-18gbps/)
+- [Marmitek Audio Anywhere 685 User Manual - ManualsLib](https://www.manualslib.com/manual/1038197/Marmitek-Audio-Anywhere-685.html?page=5)
+- [20+ Projectors With HDMI ARC/eARC - PointerClicker](https://pointerclicker.com/do-projectors-have-earc/)
+- [Wireless Audio Solution for Ceiling Mounted Projector - Tom's Guide Forum](https://forums.tomsguide.com/threads/wireless-audio-solution-for-ceiling-mounted-projector.424743/)
+- [AirPlay Surround or Multichannel Audio - Apple Community Discussion](https://discussions.apple.com/thread/253723517)
+- [AWOL Vision ThunderBeat Wireless Surround Sound System - Official Product Page](https://awolvision.com/products/thunderbeat)
+- [Can Bluetooth Transmit Surround Sound? - TheTechyLife Analysis](https://thetechylife.com/can-bluetooth-transmit-surround-sound/)
+- [BenQ ARC and eARC Projector Audio Feature Guide](https://www.benq.com/en-us/campaign/gaming-projector/resources/arc-and-earc-the-audio-feature-that-enhances-your-home-theater-experience.html)
