@@ -1,0 +1,109 @@
+# Investigation: AWS Managed AD Subdomain Namespace: Forest Isolation and Identity Boundaries
+
+**Date:** 2026-03-17
+**Status:** Complete
+
+---
+
+## Question
+
+> What is the architectural relationship between AWS Managed Microsoft AD and a corporate Active Directory forest when AWS Managed AD is deployed using a subdomain namespace (e.g., aws.corp.example.com), and what are the trust, replication, and identity scope boundaries that result?
+
+---
+
+## Context
+
+Engineering teams deploying Linux workloads in AWS often configure AWS Managed Microsoft AD with a subdomain-style DNS name such as aws.corp.example.com, intending to integrate with their on-premises corp.example.com Active Directory forest for user authentication. The naming convention superficially resembles a child-domain relationship, leading to misconceptions about replication, POSIX attribute visibility, and identity scope. This investigation documents the actual architectural boundaries.
+
+---
+
+## AWS Managed AD vs Corporate AD: What Crosses the Boundary
+
+| Capability / Object | Crosses Trust? | Notes |
+| --- | --- | --- |
+| User authentication (Kerberos TGT) | Yes | Via Kerberos referral flow across the trust |
+| User/group objects (AD replication) | No | Trust is not replication; objects stay in their home forest |
+| Group Policy Objects (GPOs) | No | GPOs are forest-local; do not apply across trust boundary |
+| POSIX attributes (uidNumber, gidNumber) | No (by default) | Must exist in the domain the Linux host is joined to; not visible cross-forest via trust alone |
+| POSIX attributes via Global Catalog | Partial | Only if corp AD publishes POSIX attrs to GC and forest trust is configured; still requires GC replication |
+| Schema extensions | No | Each forest has its own schema; AWS Managed AD schema is independent |
+| SID history / SID filtering | Filtered by default | Selective authentication can further restrict cross-trust access |
+| AD Connector (proxy) | Auth proxy only | Does not host a domain; cannot be used for Linux domain join or SSSD |
+| Hybrid Edition DCs | Full replication | Different product — AWS manages DCs as part of the on-prem domain, not a separate forest |
+
+> The subdomain naming convention (aws.corp.example.com) is a DNS namespace choice only. AWS Managed AD always creates a NEW, SEPARATE Active Directory forest regardless of the DNS name chosen.
+
+---
+
+## Key Findings
+
+- AWS Managed Microsoft AD always creates a new, independent Active Directory forest — regardless of whether its DNS name looks like a subdomain (aws.corp.example.com). It is NOT a child domain of corp.example.com and has no automatic parent-child trust.
+- The subdomain naming convention is a DNS namespace choice to simplify conditional forwarder setup and organizational naming. It has zero effect on AD forest topology or replication scope.
+- Inter-forest connectivity requires an explicitly configured trust. AWS Managed AD supports one-way incoming, one-way outgoing, and two-way forest and external trusts with on-premises AD.
+- A forest trust (recommended over external trust) enables Kerberos-based authentication referrals between forests. When a Linux host joined to aws.corp.example.com authenticates a corp.example.com user, the DC in aws.corp.example.com issues a Kerberos referral TGT pointing the client to corp.example.com DCs to obtain the service ticket.
+- No AD objects replicate across a trust boundary. Users, groups, computer objects, and GPOs remain in their home forest. Only authentication flows across the trust — not directory data.
+- GPOs from corp.example.com do not apply to machines in the aws.corp.example.com forest. Each forest manages its own GPOs independently.
+- POSIX attributes (uidNumber, gidNumber, loginShell, unixHomeDirectory) stored in corp.example.com AD are NOT visible to SSSD on a Linux host joined to aws.corp.example.com via trust alone. SSSD queries its joined domain's LDAP/GC; cross-forest POSIX attrs require explicit GC replication in the corp forest and are still constrained by SSSD's single-forest LDAP binding.
+- The SSSD ad_provider natively supports only a single AD forest. For a Linux host joined to aws.corp.example.com, SSSD binds to aws.corp.example.com DCs and cannot directly LDAP-query corp.example.com for POSIX attributes. SSSD's ad_provider does not natively support cross-forest trust authentication; cross-forest user access requires a winbind-based approach or an IPA+trust configuration as alternatives to SSSD.
+- AWS Managed AD supports schema extensions via LDIF upload (both Standard and Enterprise editions). However, the aws.corp.example.com forest schema is entirely independent from the corp.example.com schema — schema changes in one forest have no effect on the other.
+- AD Connector is a proxy service that forwards authentication to an existing on-premises AD. It does not host any domain, cannot serve as a target for domain join, and cannot be used with SSSD's ad_provider for Linux integration. Linux instances that join via AD Connector actually bypass it and communicate directly with on-premises DCs.
+- AWS Managed Microsoft AD Hybrid Edition (GA August 2025) is architecturally distinct from Standard/Enterprise Managed AD. Hybrid Edition extends the on-premises domain into AWS by adding AWS-managed DCs to the existing corp.example.com domain — the same forest, same schema, full replication. This eliminates the cross-forest trust problem entirely but is a different product with different prerequisites.
+- One-way trust direction matters for Linux workloads: if the trust is outgoing from aws.corp.example.com to corp.example.com (corp is the trusted forest), then corp users can authenticate to resources in aws.corp.example.com. Amazon EC2 and most AWS services work with either one-way or two-way trusts for authentication; two-way trust is required for AWS enterprise apps like IAM Identity Center, WorkSpaces, and Amazon Connect.
+
+---
+
+## Concepts & Entities
+
+| Concept | Description |
+|---------|-------------|
+| Active Directory Forest | The top-level security and replication boundary in Active Directory. Each forest has its own schema, global catalog, and trust relationships. Forests do not share directory data unless explicitly federated via trusts. |
+| Child Domain vs Separate Forest | A child domain (e.g., child.parent.example.com) is created inside an existing forest and automatically inherits a transitive two-way parent-child trust, shares the forest schema, and replicates to the same global catalog. A separate forest with a subdomain-style name (aws.corp.example.com) shares none of these properties — it is entirely isolated until a trust is manually established. |
+| Forest Trust | A manually configured trust between two forest root domains that allows Kerberos authentication to traverse the boundary. Recommended by Microsoft and AWS over external trusts because it fully supports Kerberos without caveats. Forest trusts are non-transitive across three or more forests — Forest A trusting Forest B and Forest B trusting Forest C does not grant Forest A access to Forest C. |
+| Kerberos Referral Flow | When a client in Forest A requests a service ticket for a resource in Forest A but presents a principal from Forest B, the Forest A DC issues a referral TGT pointing the client to a Forest B DC. The client then contacts the Forest B DC to obtain the actual service ticket. This is the only authentication mechanism that crosses a forest trust; no LDAP data crosses with it. |
+| SSSD ad_provider Single-Forest Constraint | SSSD's ad_provider binds LDAP and Kerberos connections to the single AD forest the Linux host is joined to. It cannot natively perform LDAP queries against a trusted foreign forest's DCs. SSSD's ad_provider does not natively support cross-forest trust authentication; organizations requiring Linux hosts to authenticate users from a trusted forest must use winbind or an IPA+trust configuration instead of SSSD alone. |
+| POSIX Attribute Locality | POSIX attributes (uidNumber, gidNumber, loginShell, homeDirectory) used by Linux systems must exist as populated attributes in the AD domain the Linux host is joined to, or be replicated to that forest's Global Catalog. Attributes stored exclusively in a remote (trusted) forest are not accessible to SSSD's LDAP queries on the joined host. |
+| AD Connector | An AWS Directory Service product that acts as a proxy, forwarding authentication requests to an existing on-premises AD over a VPN or Direct Connect link. It does not create or host any AD domain and cannot serve as a domain join target for Linux instances. Instances that attempt domain join via AD Connector end up communicating directly with on-premises DCs. |
+| AWS Managed AD Hybrid Edition | An AWS Directory Service offering (GA August 2025) that extends an existing on-premises AD domain into AWS by deploying AWS-managed domain controllers as members of the on-premises forest. Unlike Standard/Enterprise Managed AD, Hybrid Edition hosts DCs in the same forest — meaning full replication, same schema, and no cross-forest trust complexity. |
+| Selective Authentication | An optional trust configuration that restricts which users from the trusted forest are permitted to authenticate to specific computer objects in the trusting forest. More granular than a blanket forest trust; relevant for least-privilege access across the aws.corp.example.com / corp.example.com boundary. |
+| Global Catalog (GC) | A read-only partial replica of all objects in an AD forest, hosted on designated DCs. SSSD uses the GC to resolve cross-domain group memberships and to detect POSIX attributes across multiple domains within the same forest. GC does not span separate forests. |
+
+---
+
+## Tensions & Tradeoffs
+
+- Subdomain naming (aws.corp.example.com) is operationally convenient for DNS conditional forwarding but actively misleads engineers into believing a parent-child AD relationship exists where none does.
+- Forest trust enables Kerberos authentication for corp users on AWS-joined Linux hosts, but SSSD's LDAP binding constraint means POSIX attributes for those users must be duplicated or re-provisioned in the AWS forest — a significant identity data management burden.
+- AWS Managed AD schema extensions are supported (via LDIF), but since it is a separate forest, any schema customisation must be independently applied and maintained. Schema drift between the two forests is a long-term operational risk.
+- Hybrid Edition solves the cross-forest identity problem (same forest = same schema, full replication, POSIX attributes visible) but requires registering on-premises DCs as SSM managed nodes and meeting Windows Server 2012 R2+ functional-level prerequisites — not always feasible for legacy environments.
+- One-way trust is sufficient for Linux EC2 authentication (corp users logging into AWS-joined hosts) but insufficient for AWS enterprise services (IAM Identity Center, WorkSpaces) which require two-way trust — creating pressure toward a wider trust footprint than the Linux use case alone demands.
+
+---
+
+## Open Questions
+
+- If POSIX attributes are published to the corp.example.com Global Catalog, can SSSD on an aws.corp.example.com-joined host reach that GC across the forest trust, and under what network and SSSD configuration conditions?
+- Does SSSD's ad_provider support the use_fully_qualified_names and subdomain discovery mechanisms in a way that allows the trusted corp.example.com domain to be treated as a subdomain for identity resolution, or is a separate SSSD domain stanza required?
+- For Hybrid Edition deployments, what is the supported functional level floor and are there constraints on the number or placement of on-premises DCs that must be registered with SSM?
+- Does AWS Managed AD enforce SID filtering on forest trusts by default, and what is the impact on group membership traversal for corp users accessing AWS resources?
+- Are there constraints on which LDIF schema extension classes can be added to AWS Managed AD that would affect POSIX attribute storage if the decision is made to provision POSIX attributes locally in the aws.corp.example.com forest?
+
+---
+
+## Sources & References
+
+- [Creating a trust relationship between your AWS Managed Microsoft AD and self-managed AD](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_setup_trust.html)
+- [Everything you wanted to know about trusts with AWS Managed Microsoft AD](https://aws.amazon.com/blogs/security/everything-you-wanted-to-know-about-trusts-with-aws-managed-microsoft-ad/)
+- [AWS Managed Microsoft AD best practices - AWS Directory Service](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_best_practices.html)
+- [Design consideration for AWS Managed Microsoft Active Directory](https://docs.aws.amazon.com/whitepapers/latest/active-directory-domain-services/design-consideration-for-aws-managed-microsoft-active-directory.html)
+- [Extend your Active Directory domain to AWS with AWS Managed Microsoft AD (Hybrid Edition)](https://aws.amazon.com/blogs/modernizing-with-aws/extend-your-active-directory-domain-to-aws-with-aws-managed-microsoft-ad-hybrid-edition/)
+- [Understanding AWS Managed Microsoft AD (Hybrid Edition) - AWS Directory Service](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/aws-hybrid-directory.html)
+- [AD Connector - AWS Directory Service](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/directory_ad_connector.html)
+- [Extend your AWS Managed Microsoft AD schema](https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_schema_extensions.html)
+- [How trust relationships work for forests in Active Directory - Microsoft](https://learn.microsoft.com/en-us/entra/identity/domain-services/concepts-forest-trust)
+- [Active Directory Replication Concepts - Microsoft Learn](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/get-started/replication/active-directory-replication-concepts)
+- [SSSD AD Provider - Joining AD Domain - sssd.io](https://sssd.io/docs/ad/ad-provider.html)
+- [Detecting POSIX attributes in Global Catalog using the Partial Attribute Set - sssd.io](https://sssd.io/design-pages/posix_attrs_detection.html)
+- [Chapter 7. Planning a cross-forest trust between IdM and AD - Red Hat RHEL 9](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/planning_identity_management/planning-a-cross-forest-trust-between-idm-and-ad_planning-identity-management)
+- [Configuring an Active Directory Domain with POSIX Attributes - Red Hat Customer Portal](https://access.redhat.com/articles/3023821)
+- [Scenario 6: AWS Microsoft AD, shared services VPC, and one-way trust to on-premises](https://docs.aws.amazon.com/whitepapers/latest/best-practices-deploying-amazon-workspaces/scenario-6-aws-microsoft-ad-shared-services-vpc-and-a-one-way-trust-to-on-premises.html)
+- [EC2 Linux Domain Join with SSM - winbind vs sssd - AWS re:Post](https://repost.aws/questions/QU2I3mMdDbQuW-_psNoHRjzQ/ec2-linux-domain-join-w-ssm-aws-joindirectoryservicedomain-winbind-vs-sssd)

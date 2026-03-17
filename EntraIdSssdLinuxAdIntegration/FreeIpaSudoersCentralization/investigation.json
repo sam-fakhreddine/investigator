@@ -1,0 +1,249 @@
+{
+  "topic": "FreeIPA / Red Hat IDM Centralized Sudoers Management",
+  "date": "2026-03-17",
+  "status": "Complete",
+  "question": "How does FreeIPA / Red Hat IDM centralize sudoers management for Linux hosts, and what is the architecture and data flow for distributing sudo policy to SSSD-joined hosts?",
+  "context": "Organizations running Red Hat Enterprise Linux or CentOS/Alma/Rocky Linux fleets often use FreeIPA (upstream) or Red Hat IDM (downstream) to replace /etc/sudoers with centrally managed rules stored in LDAP. SSSD on each host retrieves and enforces these rules locally. A secondary concern is whether AD-sourced users (via FreeIPA cross-forest trust) can also receive FreeIPA-managed sudo rules.",
+  "quick_reference": {
+    "title": "FreeIPA Sudo Rule Scoping Attributes",
+    "columns": [
+      "Attribute (LDAP)",
+      "Object Class",
+      "Purpose",
+      "Multivalued"
+    ],
+    "rows": [
+      [
+        "cn",
+        "sudoRole",
+        "Rule name / DN component",
+        "No"
+      ],
+      [
+        "sudoUser",
+        "sudoRole",
+        "Target users or groups (%, +group syntax)",
+        "Yes"
+      ],
+      [
+        "sudoHost",
+        "sudoRole",
+        "Target hostnames, IP ranges, or IPA host groups",
+        "Yes"
+      ],
+      [
+        "sudoCommand",
+        "sudoRole",
+        "Commands allowed or denied (ALL, negation with !)",
+        "Yes"
+      ],
+      [
+        "sudoRunAsUser",
+        "sudoRole",
+        "User to run as (default root)",
+        "Yes"
+      ],
+      [
+        "sudoRunAsGroup",
+        "sudoRole",
+        "Group to run as",
+        "Yes"
+      ],
+      [
+        "sudoOption",
+        "sudoRole",
+        "Options equivalent to Defaults tags (NOPASSWD, etc.)",
+        "Yes"
+      ],
+      [
+        "sudoOrder",
+        "sudoRole",
+        "Integer ordering for rule precedence",
+        "No"
+      ],
+      [
+        "sudoNotBefore / sudoNotAfter",
+        "sudoRole",
+        "Time-boxed rule validity window",
+        "No"
+      ],
+      [
+        "memberHost (IPA)",
+        "ipaSudoRule",
+        "IPA host group DN references (IPA-native)",
+        "Yes"
+      ],
+      [
+        "memberUser (IPA)",
+        "ipaSudoRule",
+        "IPA user/group DN references (IPA-native)",
+        "Yes"
+      ]
+    ],
+    "notes": "FreeIPA stores rules under cn=sudo,dc=<realm>. The ipaSudoRule objectClass extends sudoRole with DN-based membership. SSSD resolves these DN references at query time and caches flattened results locally."
+  },
+  "key_findings": [
+    "FreeIPA stores sudo policy in its 389-DS LDAP directory under cn=sudo,dc=<realm> using a dual-objectclass model: each rule carries both ipaSudoRule (IPA-native DN-linked membership) and sudoRole (RFC 4876 sudoers LDAP schema compatibility).",
+    "The SSSD sudo provider for IPA-joined hosts (id_provider=ipa, sudo_provider=ipa) queries the IPA server and resolves group memberships through IPA LDAP indexes, then caches flattened sudoRole objects in the SSSD sysdb SQLite database under /var/lib/sss/db/.",
+    "SSSD maintains a local SQLite cache of sudo rules and refreshes it on a configurable schedule (smart refresh default 15 minutes for expiring entries, full refresh default 6 hours); sudo decisions are made against this cache, so enforcement continues when the IPA server is unreachable.",
+    "The IPA sudo provider is distinct from the generic LDAP sudo provider: the LDAP provider reads the cn=sudo subtree with plain LDAP searches and cannot resolve IPA DN-based group memberships (ipaSudoRule memberUser/memberHost), causing group-scoped rules to silently not apply.",
+    "Sudo rule scoping in FreeIPA is three-dimensional: rules are scoped to users or IPA user groups (sudoUser / memberUser), to hostnames, IP ranges, or IPA host groups (sudoHost / memberHost), and to commands or IPA command groups (sudoCommand / memberAllowCmd / memberDenyCmd).",
+    "FreeIPA supports a command-group abstraction (ipaSudoCmdGrp) that lets administrators collect commands into named groups referenced by DN in a rule; this is a FreeIPA extension absent from the base sudoers LDAP RFC 4876 schema.",
+    "When FreeIPA establishes a cross-forest trust with Active Directory, AD users can receive FreeIPA sudo rules only if their AD identity is mapped into an IPA external group (containing AD SIDs) that is nested into an IPA POSIX group referenced in the sudo rule.",
+    "SSSD sudo_provider=ipa sends LDAP searches to the IPA server filtered by the host FQDN and its host group memberships, retrieving only rules applicable to that host and limiting local cache size on large deployments.",
+    "The sudoOrder attribute provides integer-based rule ordering; FreeIPA conflict resolution follows the sudoers LDAP model where DENY rules (! prefix on sudoCommand) take precedence within a rule, not globally across rules -- differing from classic /etc/sudoers first-match-wins line semantics.",
+    "Local /etc/sudoers and /etc/sudoers.d/ entries coexist with LDAP-sourced rules; the nsswitch.conf sudoers entry controls source ordering, and the default files-first ordering means local entries silently override centrally managed policy.",
+    "Red Hat IDM ipa-client-install automatically writes the correct sssd.conf sudo stanza on enrolled hosts; manual sssd.conf configuration is only required for non-IPA-enrolled hosts using the generic LDAP sudo provider against an IPA LDAP backend.",
+    "SSSD logs sudo provider activity to /var/log/sssd/sssd_sudo.log, which can be used to trace rule evaluation and diagnose policy mismatches without requiring an actual sudo attempt."
+  ],
+  "concepts": [
+    {
+      "name": "cn=sudo subtree",
+      "description": "The LDAP container in FreeIPA 389-DS where all sudo rules are stored. Each rule is a child entry with DN cn=<rulename>,cn=sudo,dc=<realm>. This subtree is replicated to all IPA replicas as part of standard DIT replication."
+    },
+    {
+      "name": "ipaSudoRule objectClass",
+      "description": "FreeIPA LDAP objectClass that extends sudoRole with DN-based membership attributes (memberUser, memberHost, memberAllowCmd, memberDenyCmd). It allows referencing IPA group and host-group objects by DN rather than flat string, enabling dynamic group membership resolution."
+    },
+    {
+      "name": "sudoRole objectClass",
+      "description": "The standard LDAP objectClass from the sudoers LDAP schema (RFC 4876). Defines flat string attributes like sudoUser, sudoHost, sudoCommand. FreeIPA entries carry both ipaSudoRule and sudoRole so they are readable by generic LDAP sudo clients, though those clients miss DN-based group expansions."
+    },
+    {
+      "name": "SSSD sudo provider ipa",
+      "description": "The SSSD backend activated by sudo_provider=ipa in sssd.conf. It retrieves sudo rules from the IPA LDAP server, resolves DN-based group memberships through IPA indexes, and stores flattened rules in the local sysdb SQLite cache. Required for correct IPA host-group and user-group scoping."
+    },
+    {
+      "name": "SSSD sudo provider ldap",
+      "description": "The generic SSSD backend for sudo that reads cn=sudo with plain LDAP searches. It cannot traverse IPA DN-based group membership, so rules scoped to IPA host groups or user groups are silently skipped when this provider is used against an IPA server."
+    },
+    {
+      "name": "SSSD sysdb sudo cache",
+      "description": "A local SQLite database at /var/lib/sss/db/cache_<domain>.ldb that stores sudo rules retrieved from the IPA server. SSSD performs smart refreshes for expiring rules and full refreshes on a longer cycle. All sudo enforcement uses this cache, providing policy continuity during IPA outages."
+    },
+    {
+      "name": "ipaSudoCmdGrp",
+      "description": "A FreeIPA-specific LDAP objectClass for command groups. Administrators collect related commands into a named group, then reference the group DN in a rule memberAllowCmd or memberDenyCmd attribute. Enables command policy reuse across multiple rules; absent from RFC 4876 sudoers LDAP schema."
+    },
+    {
+      "name": "IPA external group",
+      "description": "An IPA group with objectClass ipaExternalGroup that holds foreign SIDs (Active Directory users or groups) as members. AD identities are mapped into IPA external groups, which are nested inside IPA POSIX groups used in sudo rules -- the only supported path for granting AD-sourced users FreeIPA sudo access."
+    },
+    {
+      "name": "nsswitch sudoers entry",
+      "description": "The sudoers: line in /etc/nsswitch.conf that controls the order sudo searches rule sources. Common values: files sss (local first, then SSSD) or sss files (SSSD first). The default files-first ordering allows local /etc/sudoers to shadow centrally managed LDAP rules."
+    },
+    {
+      "name": "sudoOrder",
+      "description": "An integer attribute on sudoRole entries influencing evaluation ordering when multiple rules match. Lower integers are evaluated first. FreeIPA exposes this attribute in the IPA CLI (ipa sudorule-add --sudoorder) and Web UI."
+    }
+  ],
+  "tensions": [
+    "The IPA sudo provider and the generic LDAP sudo provider both target cn=sudo but only the IPA provider resolves DN-based group memberships; misconfiguring sudo_provider=ldap on an IPA-joined host produces no error but silently drops all group-scoped rules.",
+    "Local /etc/sudoers is evaluated before SSSD by default (nsswitch sudoers: files sss), so a stale or overly permissive local sudoers file silently overrides centrally managed policy; full centralization requires inverting the nsswitch order or purging local sudoers.",
+    "FreeIPA sudo rules use the sudoRole LDAP schema for wire compatibility, but the ipaSudoRule DN-based extensions are not part of RFC 4876 -- non-SSSD sudo LDAP clients (sudo built with --with-ldap) see only flat sudoRole attributes and miss group-expanded memberships.",
+    "AD-sourced users can receive FreeIPA sudo rules only via the IPA external group indirection (AD SID -> IPA external group -> IPA POSIX group -> sudo rule); AD group changes do not automatically propagate to sudo policy until IPA group membership is also updated.",
+    "SSSD sudo cache provides offline resilience but creates a policy-enforcement lag window: a deleted or modified rule may remain active on cached hosts until the next full refresh cycle (up to 6 hours by default).",
+    "FreeIPA sudoOrder-based precedence differs from classic /etc/sudoers first-match-wins line semantics; administrators migrating from local sudoers must re-examine rule ordering logic to avoid unintended effective permissions."
+  ],
+  "open_questions": [
+    "What is the exact LDAP search filter SSSD IPA sudo provider sends to 389-DS, and does it perform server-side group expansion or client-side DN traversal?",
+    "How does SSSD handle deeply nested IPA group membership in sudo rule resolution -- is there a documented recursion depth cap?",
+    "Can sudoNotBefore/sudoNotAfter time-boxed rules be relied upon given SSSD cache refresh schedule -- can a time-expired rule remain cached and active past its intended end time?",
+    "Is there an officially supported integration path for non-RHEL/non-Fedora distributions (Debian, Ubuntu) to use the IPA sudo provider, or does it require packages from non-native sources?",
+    "What is the exact sudo behavior when the IPA server is unreachable and the local sysdb cache has fully expired -- does sudo fail open or fail closed?",
+    "Does FreeIPA sudo rule model support RunAs group references as IPA group DNs via ipaSudoRule, or only flat group names per the sudoRole schema?",
+    "Does sssctl support a sudo-check subcommand for pre-flight sudo policy verification without an actual sudo invocation, and if so, what is the documented syntax and which SSSD version introduced it?"
+  ],
+  "sources": [
+    {
+      "title": "Red Hat Enterprise Linux 8: Configuring sudo rules in IdM",
+      "url": "https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_identity_management/configuring-sudo-rules-in-idm_configuring-and-managing-idm",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Red Hat Enterprise Linux 9: Configuring sudo rules in IdM",
+      "url": "https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/managing_idm_users_groups_hosts_and_access_control_rules/configuring-sudo-rules-in-idm_managing-idm-users-groups-hosts-and-access-control-rules",
+      "tier": "official_doc"
+    },
+    {
+      "title": "SSSD Documentation: sudo integration",
+      "url": "https://sssd.io/docs/users/sudo_integration.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "FreeIPA Design: Sudo integration (V3)",
+      "url": "https://www.freeipa.org/page/V3/Sudo_Integration",
+      "tier": "official_doc"
+    },
+    {
+      "title": "RFC 4876: A Configuration Profile Schema for LDAP-Based Agents",
+      "url": "https://www.rfc-editor.org/rfc/rfc4876",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Red Hat IDM: Planning a cross-forest trust between IdM and AD",
+      "url": "https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/planning_identity_management/planning-a-cross-forest-trust-between-idm-and-ad_planning-identity-management",
+      "tier": "official_doc"
+    },
+    {
+      "title": "FreeIPA: Active Directory trust setup",
+      "url": "https://www.freeipa.org/page/Active_Directory_trust_setup",
+      "tier": "user_guide"
+    },
+    {
+      "title": "sssd-sudo(5) Linux man page",
+      "url": "https://linux.die.net/man/5/sssd-sudo",
+      "tier": "official_doc"
+    },
+    {
+      "title": "FreeIPA: Howto - sudo with LDAP",
+      "url": "https://www.freeipa.org/page/Howto/Sudo",
+      "tier": "user_guide"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "FreeIPA centralizes sudo policy in LDAP with host-group and user-group scoping; SSSD enforces rules locally with a cache that survives IPA server outages",
+      "so_what": "The architecture eliminates per-host /etc/sudoers drift: rules are stored once in 389-DS, replicated across IPA replicas, and pulled to each host by SSSD on a configurable refresh cycle. The local cache provides resilience during network partitions but means rule revocations take up to 6 hours to propagate without cache tuning.",
+      "bullets": [
+        "Sudo rules live in cn=sudo,dc=<realm> in FreeIPA 389-DS LDAP and are replicated to all IPA replicas -- no single point of failure for rule storage.",
+        "SSSD on each host caches rules in a local SQLite database; sudo decisions are made against that cache, so the IPA server does not need to be reachable at the moment of each sudo invocation.",
+        "Rules are scoped along three independent axes -- user or user group, host or host group, command or command group -- enabling fine-grained least-privilege policy across the fleet.",
+        "AD-sourced users can receive FreeIPA sudo rules, but only through IPA external groups that map AD SIDs into IPA POSIX groups -- a two-hop indirection that adds operational overhead.",
+        "Using the generic LDAP sudo provider instead of the IPA sudo provider causes group-scoped rules to silently not apply -- a known misconfiguration with no error output.",
+        "Local /etc/sudoers entries shadow LDAP rules by default under files-first nsswitch ordering; full centralization requires purging local sudoers or inverting the nsswitch source order."
+      ],
+      "action_required": null
+    },
+    "product_owner": {
+      "headline": "FreeIPA sudo centralization is production-ready for RHEL fleets but has four known gaps affecting completeness: local shadowing, AD-user mapping complexity, cache lag on revocation, and silent provider misconfiguration",
+      "so_what": "Teams adopting FreeIPA for sudo centralization get a well-supported LDAP-backed policy store with offline enforcement and full sudoers feature parity, but must actively manage four risks that undermine centralization completeness without triggering visible errors.",
+      "bullets": [
+        "FreeIPA sudo rules support the full sudoers feature set: NOPASSWD, RunAs user/group, command negation, time-boxed rules, and sudoOrder-based precedence.",
+        "Command groups (ipaSudoCmdGrp) allow reusable command collections across rules -- equivalent to Cmnd_Alias in local sudoers but stored in LDAP and managed via the IPA API.",
+        "SSSD sudo cache refresh is tunable: the default smart refresh is 15 minutes for expiring entries, but the default full refresh is 6 hours, meaning revoked rules can remain active on cached hosts without a manual cache flush.",
+        "Non-RHEL distributions (Debian, Ubuntu) lack native package support for the sssd-ipa sudo provider, increasing integration risk for mixed-OS fleets.",
+        "The sssctl sudo-check tool enables pre-flight verification of effective sudo policy for a user without requiring an actual sudo attempt -- useful for audit and change-verification workflows."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Determine whether the fleet includes non-RHEL hosts or AD-sourced users that require sudo access, as both scenarios require additional architecture decisions before committing to FreeIPA sudo centralization.",
+        "work_to_assign": [
+          "Audit current /etc/sudoers content across the fleet to identify rules that need migration and entries that would conflict with centralization under files-first nsswitch ordering",
+          "Inventory all Linux hosts not enrolled in IPA or running non-RHEL distributions to scope the coverage gap",
+          "Map AD-sourced users or groups that require sudo access and define the IPA external group structure needed to bridge them into FreeIPA sudo rules",
+          "Define acceptable cache-lag tolerance for sudo rule revocation and decide whether sudo_cache_timeout tuning or a documented manual cache-flush procedure is required"
+        ],
+        "leadership_input": "Decide whether the up-to-3-hour maximum cache lag for rule revocation is acceptable for the organization security posture, or whether a shorter TTL with increased IPA server query load is preferred."
+      },
+      "questions_to_ask_engineering": [
+        "Which Linux distributions are in the fleet, and which hosts are already IPA-joined with sudo_provider=ipa configured vs the generic ldap provider?",
+        "Are there hosts with local /etc/sudoers content that would shadow centrally managed rules under the default files-first nsswitch ordering?",
+        "Have any AD-sourced users been granted sudo access via IPA external groups, and is that SID-to-group mapping kept in sync with AD group changes?",
+        "What is the current sudo_cache_timeout configuration across enrolled hosts, and is there a documented emergency cache-flush procedure for immediate rule revocation?",
+        "Is sssctl sudo-check used in any audit or deployment pipeline to verify effective sudo policy before changes go live?"
+      ]
+    }
+  }
+}

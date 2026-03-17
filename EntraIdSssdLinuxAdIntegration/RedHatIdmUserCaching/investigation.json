@@ -1,0 +1,298 @@
+{
+  "topic": "Red Hat IDM and SSSD User/Credential Caching Architecture",
+  "date": "2026-03-17",
+  "status": "Complete",
+  "question": "How does Red Hat IDM (FreeIPA) and SSSD user/credential caching work architecturally to avoid slow or failed identity queries for business (non-technical) users on Linux hosts?",
+  "context": "Organizations enrolling Linux hosts into Red Hat IDM (FreeIPA) rely on SSSD as the identity broker between the host and the directory. Non-technical users experience login delays or failures when identity servers are unreachable or when directory objects are large. Understanding the caching architecture is prerequisite to diagnosing and sizing these systems.",
+  "quick_reference": {
+    "title": "SSSD Cache Types and Key Parameters",
+    "columns": [
+      "Cache Type",
+      "Storage Location",
+      "What Is Stored",
+      "Default TTL / Expiry",
+      "Key Parameter"
+    ],
+    "rows": [
+      [
+        "Identity (sysdb)",
+        "/var/lib/sss/db/cache_<domain>.ldb",
+        "User POSIX attrs (UID, GID, home, shell), group memberships, SSH keys, autofs maps",
+        "5400 seconds (90 min)",
+        "entry_cache_timeout"
+      ],
+      [
+        "Timestamp (split cache)",
+        "/var/lib/sss/db/timestamp_<domain>.ldb",
+        "lastUpdate and dataExpireTimestamp for each entry (metadata only)",
+        "Mirrors sysdb TTL",
+        "entry_cache_nowait_percentage"
+      ],
+      [
+        "Credential (offline auth)",
+        "Embedded in sysdb LDB per-user record",
+        "Salted password hash (not plaintext)",
+        "0 days = forever; disabled by default",
+        "cache_credentials, offline_credentials_expiration"
+      ],
+      [
+        "Kerberos TGT (KCM)",
+        "/var/lib/sss/secrets (KCM store)",
+        "Active Kerberos ticket-granting tickets per-user",
+        "Ticket lifetime (typically 10-24 h)",
+        "sssd-kcm service"
+      ],
+      [
+        "Sudo rules",
+        "sysdb LDB (same domain cache)",
+        "LDAP-format sudoRole objects",
+        "Smart refresh 15 min, full refresh 6 h",
+        "ldap_sudo_smart_refresh_interval, ldap_sudo_full_refresh_interval"
+      ],
+      [
+        "HBAC rules (IPA only)",
+        "sysdb LDB (same domain cache)",
+        "Host-based access control policy objects",
+        "5 seconds default refresh",
+        "ipa_hbac_refresh"
+      ],
+      [
+        "SELinux maps (IPA only)",
+        "sysdb LDB (same domain cache)",
+        "SELinux user-context mappings",
+        "Refresh on policy change",
+        "ipa_selinux_refresh"
+      ]
+    ],
+    "notes": "cache_credentials = false is the default; offline credential caching must be explicitly enabled. The KCM cache is architecturally separate from the identity/credential sysdb."
+  },
+  "key_findings": [
+    "SSSD is a multi-process daemon: a Monitor spawns per-domain Backend (data provider) processes and per-protocol Responder processes (NSS, PAM, sudo, SSH). Only the Backend writes to the LDB cache; Responders only read from it.",
+    "The primary identity store is an LDB (LDAP-like embedded) database at /var/lib/sss/db/cache_<domain>.ldb. It stores user POSIX attributes, group memberships, sudo rules, autofs maps, and SSH keys as a local replica of all directory objects SSSD has fetched.",
+    "SSSD 1.14 introduced a split-cache design: a second LDB at timestamp_<domain>.ldb stores only expiry timestamps. When the backend re-fetches an entry whose attributes have not changed on the server, only the timestamp database is updated, avoiding expensive full rewrites of large group objects.",
+    "Every cache entry carries a dataExpireTimestamp driven by entry_cache_timeout (default 5400 s). When a Responder receives a lookup, it returns cached data immediately if valid, or blocks waiting for the Backend to refresh if the entry is expired.",
+    "entry_cache_nowait_percentage enables background refreshes: entries past that percentage of their TTL are served from cache immediately while the Backend updates in the background, eliminating blocking waits at the cost of brief staleness.",
+    "SSSD transitions to offline mode when the backend cannot reach the LDAP/Kerberos server. In offline mode, identity data continues to be served from the LDB cache as long as entries have not yet expired; authentication succeeds only if cache_credentials = true was set and the user has logged in at least once while online.",
+    "cache_credentials is false by default, meaning offline authentication is not available unless explicitly enabled. When enabled, a salted password hash is stored per-user in the sysdb LDB, governed by offline_credentials_expiration (days; 0 = never expire).",
+    "The Kerberos TGT credential cache is managed by the sssd-kcm process and stored separately in /var/lib/sss/secrets. It survives KCM restarts and reboots. It is architecturally distinct from the identity LDB cache and from the offline password hash.",
+    "The sudo rule cache uses two independent refresh cycles: a smart refresh (default every 15 min) fetches only rules modified since last sync; a full refresh (default every 6 h) replaces all rules. Each sudo invocation also triggers an on-demand per-user rule freshness check.",
+    "The IPA backend (FreeIPA) extends the generic LDAP provider with additional cached object types: HBAC rules (refreshed every 5 s by default via ipa_hbac_refresh), SELinux user maps, and Kerberos policy. These are not available with a vanilla LDAP provider.",
+    "The IPA provider enforces HBAC access decisions locally using cached policy, so access control works even briefly offline; a capability that requires a full LDAP bind in vanilla LDAP configurations.",
+    "enumerate = false (the default) means SSSD does not pre-populate the cache with all users and groups at startup. Entries are cached only on first lookup. This keeps startup load low but means first-ever lookups for a user are always live directory queries with no cache hit.",
+    "Enabling enumerate = true on large directories causes severe CPU storms in sssd_be: with 30,000 LDAP users, documented cases show sssd_be consuming ~99% CPU during enumeration, blocking all login operations for minutes.",
+    "First-login latency spikes when SSSD must resolve large or deeply nested group memberships during login. NSS calls can time out after 58 seconds; in extreme cases (80,000+ group members) login took up to 5 minutes, and sssd_be was killed by the internal watchdog.",
+    "ignore_group_members = true instructs SSSD to cache group metadata but not member lists, providing a major performance improvement in large-group environments at the cost of group-member enumeration accuracy.",
+    "Red Hat official SSSD performance guidance for large IdM-AD trust deployments recommends mounting the SSSD cache directory on a RAM-backed filesystem and sizing approximately 100 MB per 10,000 LDAP entries."
+  ],
+  "concepts": [
+    {
+      "name": "LDB (sysdb) cache",
+      "description": "An LDAP-like embedded on-disk database that is SSSD primary persistent store. One file per domain. Stores all identity objects (users, groups, sudo rules, SSH keys, autofs maps). Only the Backend process writes to it."
+    },
+    {
+      "name": "Timestamp cache",
+      "description": "A second per-domain LDB introduced in SSSD 1.14 that stores only lastUpdate and dataExpireTimestamp fields. Allows TTL updates without rewriting full object blobs, dramatically reducing write latency for entries whose attributes have not changed."
+    },
+    {
+      "name": "Offline credential cache",
+      "description": "A salted password hash stored inside the sysdb LDB per user record. Enables password authentication when the identity server is unreachable. Disabled by default (cache_credentials = false). Governed by offline_credentials_expiration and account_cache_expiration."
+    },
+    {
+      "name": "KCM (Kerberos Cache Manager)",
+      "description": "A separate SSSD responder process (sssd-kcm) that stores live Kerberos TGTs in /var/lib/sss/secrets. Persists across SSSD restarts and reboots. Architecturally distinct from the identity LDB cache."
+    },
+    {
+      "name": "Online vs offline mode",
+      "description": "SSSD switches to offline mode when the backend fails to reach the LDAP or Kerberos server. In offline mode, identity data is served from LDB as long as entries are not expired; authentication requires a cached credential hash. Reconnection probing introduces up to 6-second delays per probe cycle."
+    },
+    {
+      "name": "entry_cache_timeout",
+      "description": "The primary TTL governing how long any cached identity object (user, group, etc.) is considered fresh before the backend must re-query the directory. Default 5400 seconds (90 minutes). Separate timeout parameters exist per object type (e.g. entry_cache_group_timeout, entry_cache_sudo_timeout)."
+    },
+    {
+      "name": "entry_cache_nowait_percentage",
+      "description": "When a lookup arrives after this percentage of entry_cache_timeout has elapsed since the last cache write, SSSD returns the stale cached entry immediately and refreshes in the background. Prevents blocking waits at the cost of brief staleness."
+    },
+    {
+      "name": "enumerate",
+      "description": "Boolean domain parameter controlling whether SSSD proactively downloads all users and groups from the directory at startup. Defaults to false. When true, enables getent passwd/group to list all users but causes CPU-intensive bulk fetches that can block logins on large directories."
+    },
+    {
+      "name": "IPA provider",
+      "description": "The SSSD backend plugin specific to FreeIPA / Red Hat IDM. Extends the LDAP provider with auto-discovery, HBAC policy enforcement (cached, offline-capable), SELinux user mapping, and native sudo integration. Distinct from the generic ldap or ad providers."
+    },
+    {
+      "name": "HBAC cache",
+      "description": "FreeIPA-specific access policy objects cached in sysdb by the IPA provider. SSSD evaluates access rules locally against the cache. ipa_hbac_refresh (default 5 s) controls how often SSSD re-fetches policy from the IPA server. Enforced even when offline using last-fetched rules."
+    },
+    {
+      "name": "Sudo rule cache",
+      "description": "Sudo policy objects stored in the sysdb LDB. Refreshed via two parallel cycles: smart refresh (incremental, every 15 min by default) and full refresh (complete replacement, every 6 h by default). Per-user rule freshness is also checked on each sudo invocation."
+    },
+    {
+      "name": "ignore_group_members",
+      "description": "IPA/LDAP provider option that tells SSSD to cache group objects without fetching or storing member lists. Eliminates the primary source of large-group write latency. Group membership for sudo and HBAC evaluation still works via the memberof attribute on user objects."
+    }
+  ],
+  "tensions": [
+    "Longer entry_cache_timeout reduces directory load and avoids blocking lookups but means identity changes (password resets, group modifications, account disables) propagate to hosts only after the TTL expires, a security and operational tension.",
+    "enumerate = true pre-warms the cache for fast getent lookups and avoids first-login cold-cache latency, but generates severe CPU and network load on large directories that can make logins impossible during the enumeration window.",
+    "entry_cache_nowait_percentage resolves the staleness-vs-blocking tradeoff by returning stale data immediately, but means some lookups may reflect directory state that is up to entry_cache_timeout seconds old, an ambiguous freshness guarantee.",
+    "cache_credentials = false (the default) is the safest posture against credential replay on a compromised host, but means users cannot authenticate at all if the identity server is unreachable, a high-availability risk for critical workloads.",
+    "ignore_group_members dramatically reduces login latency for large-group environments but breaks getent group member enumeration and any application that depends on reading group member lists from NSS rather than querying the directory directly.",
+    "ipa_hbac_refresh defaults to 5 seconds to keep access policy fresh, but frequent refreshes add per-login latency and server load in environments with many concurrent SSH sessions; raising it too high delays propagation of access revocations.",
+    "The KCM credential cache persists Kerberos TGTs across reboots (intentional for reliability), which also means a stolen or compromised host retains valid tickets until expiry, a security-vs-usability tradeoff not present in traditional in-memory ccache implementations."
+  ],
+  "open_questions": [
+    "Does the IPA provider HBAC cache remain valid and enforced indefinitely in offline mode, or does SSSD eventually deny access once the cached policy reaches an internal staleness threshold?",
+    "What is the precise behavior when an entry in the sysdb LDB has expired (past entry_cache_timeout) but the backend is offline: does SSSD serve the stale entry or return a lookup failure?",
+    "Is there a documented maximum cache size or entry count beyond which LDB lookup performance degrades measurably, and does Red Hat publish sizing guidance specific to identity-only (non-AD-trust) deployments?",
+    "How does SSSD handle the race condition where a user identity entry expires and the backend is simultaneously transitioning from offline to online mode: do queued requests pile up or are they answered from stale cache?",
+    "For sudo rule evaluation with large nested groups, does SSSD resolve group membership from the local sysdb cache or does it issue live LDAP memberof queries, and does the answer change when ignore_group_members is set?"
+  ],
+  "sources": [
+    {
+      "title": "SSSD Architecture - sssd.io",
+      "url": "https://sssd.io/docs/architecture.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "SSSD Internals - docs.pagure.org",
+      "url": "https://docs.pagure.org/sssd.sssd/developers/internals.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Improve SSSD Performance with a timestamp cache - sssd.io",
+      "url": "https://sssd.io/design-pages/one_fourteen_performance_improvements.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "SUDO Caching Rules - sssd.io",
+      "url": "https://sssd.io/design-pages/sudo_caching_rules.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "SUDO Responder Cache Behaviour - sssd.io",
+      "url": "https://sssd.io/design-pages/sudo_responder_cache_behaviour.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Authenticate against cache in SSSD - sssd.io",
+      "url": "https://sssd.io/design-pages/cached_authentication.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "KCM server for SSSD - sssd.io",
+      "url": "https://sssd.io/design-pages/kcm.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Managing the SSSD Cache - Red Hat RHEL 6 Deployment Guide",
+      "url": "https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/6/html/deployment_guide/sssd-cache",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Domain Options Enabling Offline Authentication - Red Hat RHEL 6",
+      "url": "https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/6/html/deployment_guide/sssd-cache-cred",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Understanding SSSD and its benefits - Red Hat RHEL 8",
+      "url": "https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_authentication_and_authorization_in_rhel/understanding-sssd-and-its-benefits_configuring-authentication-and-authorization-in-rhel",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Tuning SSSD performance for large IdM-AD trust deployments - RHEL 9",
+      "url": "https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/tuning_performance_in_identity_management/assembly_tuning-sssd-performance-for-large-idm-ad-trust-deployments_tuning-performance-in-idm",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Tuning performance in Identity Management - Red Hat RHEL 8",
+      "url": "https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/tuning_performance_in_identity_management/index",
+      "tier": "user_guide"
+    },
+    {
+      "title": "SSSD logins and user lookups from large domains are slow - Red Hat Customer Portal",
+      "url": "https://access.redhat.com/solutions/705623",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Slow logins with SSSD due to large and nested groups in Active Directory - Red Hat Customer Portal",
+      "url": "https://access.redhat.com/solutions/1475233",
+      "tier": "user_guide"
+    },
+    {
+      "title": "Cache credentials with SSSD in offline mode - Red Hat Customer Portal",
+      "url": "https://access.redhat.com/solutions/500963",
+      "tier": "user_guide"
+    },
+    {
+      "title": "sssd-ipa(5) man page - configuration file for SSSD IPA provider",
+      "url": "https://linux.die.net/man/5/sssd-ipa",
+      "tier": "official_doc"
+    },
+    {
+      "title": "sssd-sudo(5) man page - Configuring sudo with SSSD back end",
+      "url": "https://linux.die.net/man/5/sssd-sudo",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Enumerating large number of users makes sssd_be hog CPU - GitHub Issue 2771",
+      "url": "https://github.com/SSSD/sssd/issues/2771",
+      "tier": "community"
+    },
+    {
+      "title": "SSSD Frequently Asked Questions - docs.pagure.org",
+      "url": "https://docs.pagure.org/sssd.sssd/users/faq.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Performance tuning SSSD for large IPA-AD trust deployments - jhrozek blog",
+      "url": "https://jhrozek.wordpress.com/2015/08/19/performance-tuning-sssd-for-large-ipa-ad-trust-deployments/",
+      "tier": "blog"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "SSSD caches identity data locally on each Linux host but offline auth and cache warm-up require explicit configuration choices with meaningful tradeoffs",
+      "so_what": "By default, SSSD serves user identity data from a local LDB cache (90-minute TTL) and handles brief directory outages silently. However, the offline password cache is off by default, enumeration is off by default, and large group memberships cause well-documented first-login latency spikes. The IPA provider (FreeIPA/Red Hat IDM) is architecturally richer than vanilla LDAP: it caches HBAC access policy and sudo rules locally, making access control decisions available even when the server is briefly unreachable.",
+      "bullets": [
+        "The LDB on-disk cache holds all fetched identity objects; entries expire after 90 minutes by default and are refreshed on-demand by the backend process when a lookup arrives",
+        "Offline authentication (login when IDM is unreachable) requires cache_credentials = true and is off by default, meaning users cannot log in at all if the server is down without this setting",
+        "First-login for any user not yet in cache requires a live directory query; large or nested group memberships during that query are the primary documented cause of multi-minute login delays",
+        "The IPA provider caches HBAC access policy (not just identity), so access enforcement remains active even briefly offline; this capability is not available with a generic LDAP backend",
+        "Sudo rule caching uses independent smart (15-min) and full (24-h) refresh cycles; each sudo invocation also checks per-user rule freshness, adding a small per-command latency"
+      ],
+      "action_required": "Determine whether offline credential caching (cache_credentials) is enabled in the current SSSD deployment and whether entry_cache_nowait_percentage is configured to avoid blocking logins on cache expiry"
+    },
+    "product_owner": {
+      "headline": "SSSD identity caching on Linux hosts has well-known failure modes that produce login delays or complete login failures all caused by identifiable configurable gaps in the default setup",
+      "so_what": "Linux hosts using Red Hat IDM/FreeIPA authenticate through SSSD, which maintains a local cache of user identity data. The default configuration is conservative: offline auth is disabled, no users are pre-loaded into cache, and nothing prevents first-login cold-cache latency. Users experience failures when the IDM server is unreachable (because offline auth is off) or slow logins when they belong to large groups (because group membership resolution blocks login). These are known, documented, and configurable but require deliberate choices with security and operational tradeoffs.",
+      "bullets": [
+        "If the IDM server goes offline, users cannot log in by default; this is a business continuity risk for any Linux host that relies on IDM for authentication",
+        "First login for any user is always a live directory query with no cache warmup; users in large groups (thousands of members) have documented login times of 2-10 minutes",
+        "The local cache TTL is 90 minutes by default, meaning identity changes (password resets, account disables) do not propagate to hosts until the cache expires or is manually flushed",
+        "Sudo rule changes can take up to 15 minutes (smart refresh) or 6 hours (full refresh) to reach hosts, so privilege escalation changes are not instant",
+        "The IPA provider caches access policy (HBAC) locally, meaning access rules survive brief outages, but if HBAC refresh is tuned aggressively this adds per-login latency"
+      ],
+      "risk_level": "High",
+      "next_steps": {
+        "po_action": "Prioritize an audit of SSSD configuration on production Linux hosts to determine current offline auth posture and confirm cache TTL settings are aligned with business continuity and security requirements",
+        "work_to_assign": [
+          "Audit all production SSSD configurations for cache_credentials setting and document which hosts have offline auth enabled vs disabled",
+          "Identify users or services logging into hosts with large group memberships and measure actual first-login latency in production",
+          "Review current entry_cache_timeout and entry_cache_nowait_percentage values against the 90-minute default and assess whether they match the IDM server SLA",
+          "Determine whether sudo rule propagation delay (up to 6 h for full refresh) is acceptable for privileged access changes, or whether manual cache invalidation procedures are needed"
+        ],
+        "leadership_input": "Decision required on offline auth policy: enabling cache_credentials improves availability but stores a password hash on each Linux host disk; this is a security posture choice that needs explicit sign-off"
+      },
+      "questions_to_ask_engineering": [
+        "Is cache_credentials currently enabled on production RHEL hosts enrolled in IDM, and if not, what is the plan if IDM becomes unreachable?",
+        "What is the largest group membership any user in our environment has, and has login latency for those users been measured?",
+        "Is entry_cache_nowait_percentage configured to prevent blocking logins when cache entries expire, or are users potentially experiencing blocking waits at the 90-minute cache cycle?",
+        "How quickly does an account disable in IDM propagate to prevent login on enrolled RHEL hosts, and is it bounded by the cache TTL?",
+        "Are sudo rule changes critical enough to require manual sss_cache invalidation, or is the 15-minute smart refresh interval acceptable?"
+      ]
+    }
+  }
+}
