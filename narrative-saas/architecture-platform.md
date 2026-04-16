@@ -1,459 +1,587 @@
 # PLATFORM & AI DELIVERY ARCHITECTURE
 
-*Interactive narrative SaaS — text-only — architectural vision for platform services and AI delivery layer*
+*Architect_1 — Platform & AI Delivery Layer. v2 refinement: world is read-only, queryable-but-immutable. No session grafts. No record_session_graft interface. No graft promotion service. No author-graft-review workflow inside the AI delivery path.*
 
 ---
 
-## 1. PLATFORM ARCHITECTURE
+## 1. PLATFORM ARCHITECTURE (refined)
 
-### 1.1 Core Services (named, with responsibilities)
+### 1.1 What Survives, What Deletes
 
-The platform decomposes into a bounded set of services. Each service owns one noun. No service reaches into another's storage.
+The read-only refinement removes an entire class of machinery. The deletions are larger than they look on paper — they reduce not only code but the hardest operational problems in the v1 design.
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                        READER APPS (iOS / Android / Web)         │
-│                        + EDGE RUNTIME (on-device)                │
-└───────────────┬──────────────────────────────┬───────────────────┘
-                │                              │
-                │  HTTPS / gRPC                │  WebSocket (session stream)
-                │                              │
-┌───────────────▼──────────────────────────────▼───────────────────┐
-│                         EDGE GATEWAY (CDN + API)                 │
-└──┬─────────┬─────────┬─────────┬─────────┬─────────┬────────┬───┘
-   │         │         │         │         │         │        │
-┌──▼──┐ ┌────▼───┐ ┌───▼────┐ ┌──▼────┐ ┌──▼──────┐ ┌▼──────┐ ┌▼────┐
-│IDP  │ │Catalog │ │Entitle │ │Session│ │AI       │ │State  │ │Bill │
-│Auth │ │World   │ │-ment   │ │Orch.  │ │Gateway  │ │Store  │ │Comm.│
-└─────┘ └────────┘ └────────┘ └───┬───┘ └────┬────┘ └───┬───┘ └─────┘
-                                  │          │          │
-                           ┌──────▼──────────▼──────────▼──────┐
-                           │   CANON FABRIC (ARCHITECT_2 scope) │
-                           │   (world store, canon index,       │
-                           │    provenance, retrieval)          │
-                           └──────┬─────────────────────────────┘
-                                  │
-┌──────────────┐ ┌──────────────┐ ┌▼─────────────┐ ┌──────────────┐
-│Author Portal │ │Ingestion     │ │Analytics &   │ │Moderation &  │
-│(web CMS)     │ │Pipeline      │ │Telemetry     │ │Trust Safety  │
-└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
-```
+**Deletes under read-only:**
 
-**Service roster:**
+- **Graft Promotion Service** — gone. There is nothing to promote.
+- **Author Graft Review Workflow** — gone. Authors never see a queue of reader-generated canon extensions because none are generated.
+- **Graft-to-canon diffing / merge tooling** — gone.
+- **Session-graft lifecycle states** (draft / pending-author / promoted / rejected / abandoned) — gone. The most complex state machine in v1 is removed.
+- **Graft-aware canon retrieval** (querying canon-plus-my-session's-accepted-grafts, which was the hardest correctness problem in v1) — gone. Retrieval now hits a single immutable bundle.
+- **Cross-session contamination protection** for graft leakage — gone. Two readers in the same world cannot see each other's grafts because there are no grafts.
+- **Versioned graft conflict resolution** when an author releases world v2 and a reader has pending v1 grafts — gone.
 
-- **Identity & Auth (IDP)** — federated login, device binding, offline session tokens. OIDC plus a device-bound refresh token for edge inference authorization. Anonymous "sample a world" sessions get short-lived scoped tokens.
-- **World Catalog** — discovery surface. World metadata, cover copy, sample chapters, author bio, current canon version hash, edge-model compatibility matrix (which on-device models can run this world and at what quality). Read-heavy, cache-friendly.
-- **Ebook / Commerce Store** — SKU catalog. A "World License" is a first-class SKU alongside traditional ebooks. A world can be sold as (i) one-time purchase, (ii) subscription bundle, (iii) subscription tier gated. Separated from Catalog because commerce has settlement, tax, and refund semantics Catalog should not carry.
-- **Entitlement Service** — authoritative source for *who owns what, at what canon version, with what expansions unlocked*. Called on session start to mint a session-scoped entitlement token consumed by the Session Orchestrator and the edge runtime. [CURIOUS] Entitlements must be versioned — a reader mid-session when a canon expansion ships should *not* have their world change underfoot. Entitlement token pins `(world_id, canon_version_hash, expansion_set)` for the session's lifetime.
-- **Session Orchestrator** — the conductor. Owns session lifecycle: open, checkpoint, suspend, resume, close. Holds no AI logic — it calls the AI Gateway with a structured session context and writes results to the State Store. Stateless horizontally; sessions are pinned by consistent hash only as a performance optimization, not a correctness requirement.
-- **AI Gateway** — the routing and policy layer in front of cloud LLMs. Handles provider selection (Claude, GPT, Gemini, self-hosted), prompt assembly orchestration, token accounting per reader/world/author, cost guardrails, prompt/response auditing, PII scrubbing, jailbreak detection. The edge runtime calls the AI Gateway *only when it escalates*; in steady state the edge handles inference locally.
-- **State Store** — session history, reader's discovered journal, relationship flags, scene bookmarks. Dual-homed: authoritative copy in cloud (Postgres + object store for long-form history), mirror in on-device SQLite. Conflict resolution is last-writer-wins at the checkpoint granularity, never at the turn granularity.
-- **Billing** — subscriptions, author revenue share ledger, usage-based overages (if cloud escalations per month exceed tier). Author royalty is driven by *validated sessions and canon-invoked events*, not raw token counts — that would incentivize authors to write bloated bibles.
-- **Author / Publisher Portal** — web CMS. Bible authoring (structured editors for entities, timeline, locations, factions, tone guide), ingestion job dashboard, reader analytics (depersonalized), canon expansion workflow, "reader did X, your bible didn't cover it" exception queue.
-- **Analytics & Telemetry** — event pipeline. Session spans, canon retrieval hit/miss, cloud escalation reasons, reader drop-off points, author-flagged canon breaks. Feeds both author dashboards and platform SRE.
-- **Content Ingestion Pipeline** — author uploads bible → parsers → canonicalizer → entity linker → timeline builder → embedding generator → canon index publisher → compatibility validator. Produces a signed, versioned `world bundle` artifact that is the unit of distribution to edge devices. ARCHITECT_2 owns the canon mechanics inside this; the pipeline *orchestration* is platform-owned.
-- **Moderation & Trust/Safety** — pre-publish screening of story bibles (a published world is a product; it must not contain doxxing, CSAM, targeted harassment frameworks, etc.). Runtime screening of *reader inputs* for prompt injection against the author's canon. Runtime screening of AI outputs for safety policy. This is not optional at consumer scale.
+**Survives:**
 
-### 1.2 World as a Data Structure
+- World Bundle registry (immutable artifacts)
+- Canon Retrieval Service (now strictly read-only)
+- Session State Service (now a pure projection, never a mutator)
+- Reading Surface (companion panes, typography, input)
+- Author Studio (upload, validate, publish — unchanged)
+- Versioning & reader-opt-in migration (pin-to-v1, migrate at scene boundary)
+- LLM Gateway (routing, caching, escalation)
+- Arbiter (canon-bound refusal logic)
+- Billing, auth, sync, telemetry
 
-A story bible, once ingested, is a **World Bundle** — a signed, versioned, chunked artifact. Conceptually:
+[CURIOUS] The v1 design had roughly 40% of its service surface dedicated to graft handling. v2 deletes that 40% cleanly. The simplification is not cosmetic; it is the biggest architectural win in the refinement.
+
+### 1.2 Service Topology (v2)
 
 ```
-WorldBundle
-├── manifest
-│    ├── world_id, version_hash, author_id, license_terms
-│    ├── tone_guide_hash, entity_graph_hash, timeline_hash
-│    ├── edge_model_compat: [llama-3.2-3b, phi-4-mini, gemma-3-4b, ...]
-│    └── bundle_size, expansion_parent_id (if DLC), signature
-├── canon_corpus
-│    ├── canon_entries[]       # atomic, ID'd, timestamped, provenance-tagged
-│    ├── entity_graph          # characters, factions, locations, items, events
-│    ├── timeline              # events on ordered axes (real-world, in-world)
-│    ├── locations_index       # places, their descriptors, occupants, rules
-│    ├── factions_politics     # alliances, enmities, goals, methods
-│    ├── rules_of_the_world    # magic system, physics deviations, tech level
-│    ├── tone_guide            # voice samples, forbidden registers, vocabulary
-│    ├── glossary              # invented terms with definitions + pronunciation
-│    └── author_directives     # "never reveal X until reader does Y"
-├── embeddings
-│    ├── chunk_vectors         # for local RAG
-│    └── model_family          # which embedding family these were generated in
-└── scene_seeds (optional)
-     ├── suggested openings, onboarding tableaux, "first page" candidates
+┌──────────────────────────────────────────────────────────────────────┐
+│                         READER EDGE CLIENT                           │
+│  (React/React Native/Swift — text surface + companion panes)         │
+└──────────────────┬───────────────────────────────────┬───────────────┘
+                   │ session turns                      │ bundle sync
+                   ▼                                    ▼
+┌──────────────────────────────────┐    ┌───────────────────────────────┐
+│    AI DELIVERY GATEWAY           │    │   BUNDLE DISTRIBUTION CDN     │
+│  - prompt assembly               │    │  - signed World Bundles       │
+│  - retrieval orchestration       │    │  - version pinning            │
+│  - cache management              │    │  - static assets              │
+│  - escalation router             │    │    (SVG maps, char cards)     │
+└──────┬──────────┬────────────────┘    └───────────────────────────────┘
+       │          │
+       │          ▼
+       │   ┌──────────────────────────────┐
+       │   │  CANON RETRIEVAL SERVICE     │
+       │   │  - vector + keyword + graph  │
+       │   │  - READ-ONLY                 │
+       │   │  - no mutation path exists   │
+       │   └──────────────┬───────────────┘
+       │                  │
+       ▼                  ▼
+┌────────────────┐   ┌────────────────────┐
+│ LLM PROVIDERS  │   │  WORLD BUNDLE      │
+│ (multi-vendor) │   │  STORE             │
+│ - Claude Haiku │   │  (immutable        │
+│ - Claude Sonnet│   │   content-addressed│
+│ - DeepSeek V3.2│   │   artifacts)       │
+│ - Gemini Flash │   │                    │
+│ - edge-local   │   └────────────────────┘
+└────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                       SESSION STATE SERVICE                          │
+│  - event-sourced discovery log (per reader × world × session)        │
+│  - projections: journal, glossary-learned, scenes-entered,           │
+│    characters-met, relationships-encountered                         │
+│  - NEVER writes to canon, NEVER writes to bundle                     │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                         AUTHOR STUDIO                                │
+│  (bundle upload, validate, publish, version → produces immutable    │
+│   artifacts; no path from reader activity to this studio)            │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key design choices:**
+The diagram is worth studying because the **read-only arrow direction is architecturally enforced**: Session State never calls into Bundle Store or Author Studio. The compiler / container boundary (separate service, separate DB, no shared write credential) makes it impossible to violate canon.
 
-- **Canon entries are atomic.** Each is an addressable, ID'd statement with provenance ("Chapter 4, page 82" or "author direct, 2026-03-14"). The retrieval layer returns entry IDs, not paraphrases. [CURIOUS] Making canon addressable at fine grain is what enables disputed-canon resolution — when the reader says "but the map said otherwise", the system can cite.
-- **Entity graph is first-class.** Characters, places, factions are nodes; relationships are typed edges; state on a node is versioned over the timeline axis. This is the structure the AI queries for "what does Kael currently know about the Second House?" — not a blob of prose.
-- **Tone guide is separate from canon.** Tone is a delivery constraint, canon is a truth constraint. They are applied in different prompt layers (see §2.2) and must not be co-mingled in storage — confusing the two is the #1 cause of "technically correct, tonally wrong" AI responses.
-- **Author directives are a first-class type**, distinct from canon. A directive is a rule *about* canon exposure ("do not reveal the villain's identity until scene 14 is triggered"), not canon itself. These live in their own slice because they often require bespoke enforcement logic.
-- **Embeddings are frozen at ingest time** and are tied to a specific embedding model family in the manifest. Upgrading the embedding model requires republishing the bundle. This is a deliberate constraint; silent re-embedding causes silent retrieval quality regressions.
+### 1.3 World Bundle — the Immutable Manifest
 
-### 1.3 Concurrency Isolation — No Cross-Session Contamination
-
-The hard constraint: 10,000 readers can be exploring the same world at the same time, and Alice discovering a plot twist must not change what Bob's AI will tell Bob about that same plot. Canon is shared and immutable within a version; reader state is private and per-session.
-
-**Architectural rule:** *Canon is shared memory, read-only. Reader state is session-private, read-write.*
-
-- **Canon store** is a read-only versioned artifact shared by all readers pinned to the same `(world_id, canon_version_hash)`. Caches aggressively. A canon update is a new version; existing sessions keep their pinned version until checkpoint boundary.
-- **Session state** is keyed by `(reader_id, world_id, session_id)` and lives in its own partition. Never indexed globally. The State Store namespace model is `/{reader_id}/{world_id}/{session_id}/`.
-- **Prompt assembly** never touches another reader's state. The AI Gateway takes a session context token that scopes every retrieval to the current reader's partition plus the world's canon store. [CURIOUS] This is where most "AI roleplay platforms" fail — they treat the LLM's conversation history as if it were the system's memory. We treat LLM context as volatile; the durable state is the State Store, which is rigorously partitioned.
-- **Shared-world multiplayer is out of scope.** Two readers in the same world do not interact. If we ever want that, it's a separate product with a separate synchronization model — do not build that surface into the single-reader architecture accidentally.
-- **Canon extension from a reader's improv is private by default.** When a reader does something canon didn't anticipate and the AI gracefully extends, that extension lives in the reader's session state as a *session-local canon graft*. It does not backflow to the World Bundle. The author must explicitly promote a graft to canon via the Author Portal.
-
-### 1.4 Session State & Checkpoint Model
-
-A reader's journey is an append-only log of turns plus a periodic checkpoint. The checkpoint is the unit of sync, not the turn.
+A World Bundle is a content-addressed artifact: manifest JSON + canon docs + embeddings + static assets, hashed, signed by the author's key, served immutable.
 
 ```
-Session
-├── session_id, reader_id, world_id, pinned_canon_version
-├── opened_at, last_checkpoint_at, last_turn_at
-├── turn_log[]       # append-only: {turn_id, input, output, retrieval_cites, model, latency}
-├── checkpoints[]    # snapshot at interval: {journal, relationships, flags, location, scene}
-└── derived_views
-     ├── journal_of_discoveries   # rendered text, persistent
-     ├── relationship_tracker     # per-character trust/affection/knowledge state
-     ├── glossary_encountered     # terms reader has seen defined
-     └── scene_table_of_contents  # scenes reached, revisitable
+WorldBundle v2 manifest
+├── bundle_id         (content hash — world_<hash>)
+├── author_id
+├── version           (semver; v1.3.2, v2.0.0)
+├── published_at
+├── canon/
+│   ├── world_rules.md        (rules, physics, magic, tech)
+│   ├── characters/           (one file per character)
+│   ├── locations/
+│   ├── timeline.md
+│   ├── factions.md
+│   └── lore_glossary.md
+├── tone_guide.md             (author's voice anchors)
+├── scene_graph.json          (discoverable scenes, gating conditions)
+├── assets/                   (SVG maps, static cards)
+├── embeddings/               (pre-computed — author-side cost, not reader-side)
+└── signature
 ```
 
-**Cross-device continuity:** a reader on iPhone, iPad, and web should see the same story state. Checkpoint-level sync to the cloud State Store at every scene boundary or every N turns, whichever first. On device switch, the new device pulls the latest checkpoint and replays any later turns from the cloud log. The AI context window is rehydrated from the checkpoint + last K turns — not from the full log.
+Under read-only the bundle is truly immutable post-publish. The **only** modification path is the author publishing a new version. No in-session mutation. No delta. No patch. This is the simplification that makes everything downstream cheap.
 
-**Retention:** turn logs are pruned after `M` days (tier-dependent); checkpoints and derived views are retained for the life of the entitlement. A reader who comes back 18 months later gets their journal, their relationships, and their discovered glossary — not their raw prompt/response log.
+ARCHITECT_2 owns the internal structure of canon docs and the scene-graph gating logic. My interface contract to them: **the bundle is a read-oracle; give me a `query_canon` endpoint and a `validate_response` endpoint; I do not need anything else.**
+
+### 1.4 Concurrency Isolation — Trivially Easy Now
+
+Multi-user concurrent access to the same world is **embarrassingly simple** in v2 because there is no shared mutable state. The canon is read-only; two readers in the same world are both hitting the same immutable bundle. Session state is per-reader-per-world-per-session — fully isolated by session_id.
+
+The classic concurrency headaches (serializable isolation on graft writes, two readers discovering the same region of canon simultaneously and both trying to add a graft, etc.) do not exist. A thousand readers can be in the same world at once; the canon retrieval layer is pure read, cacheable, horizontally scalable.
+
+[CURIOUS] v1's concurrency design needed pessimistic locking on graft insertion paths and optimistic reconciliation on graft-aware reads. v2 collapses this to stateless read caching with per-reader session isolation. This is the kind of simplification where the *absence* of complexity is the architectural point.
+
+### 1.5 Session State — a Projection, Never a Mutation Layer
+
+This is the most important conceptual shift in v2.
+
+Session state is **entirely a record of what the reader has uncovered from an unchanging world**. It is not a record of how the world changed; the world does not change. Event-sourced discovery log, with derived views:
+
+```
+DiscoveryLog (append-only per session)
+├── turn_001: reader_entered_scene(scene_id="mercer_lane")
+├── turn_001: character_revealed(char_id="elias_thorne")
+├── turn_002: reader_queried(topic="the_compact")
+├── turn_002: glossary_entry_unlocked(term="the_compact")
+├── turn_003: relationship_observed(char_id="elias_thorne", toward="mercer")
+└── ...
+
+Projections (materialized on demand, cacheable, deterministic):
+  - Journal (summarized narrative of reader's path)
+  - Characters Met (with what the reader knows about each)
+  - Glossary Learned (only terms reader has encountered)
+  - Scene Map (fog-of-war — revealed regions only)
+  - Relationships Observed (per reader's knowledge, not ground-truth)
+```
+
+Every projection is derived from the discovery log; the log is derived from canon-grounded turns. No projection mutates canon. No projection mutates any other projection. No session writes to any other session.
+
+The reader's experience of the world is a **lens**, not an edit. This is the core simplification.
 
 ---
 
-## 2. AI DELIVERY LAYER
+## 2. AI DELIVERY LAYER (refined)
 
-### 2.1 The AI's Role — Narrator, GM, Character, Arbiter
+### 2.1 What the LLM Is Doing (and Not Doing) Per Turn
 
-The AI in a session wears four hats, and the system must know which hat is on at every moment. Conflating them produces the most common failure mode of LLM-driven fiction: the character-voice bleeds into the narration, or the GM's "actually, here's what happens" voice bleeds into a character's dialogue.
+In v1, the LLM had three roles: narrator, character actor, game-master-with-stakes. The "game master" role is the one that forced the generative-canon-extension pathway. Under v2, **the game-master role largely evaporates**.
 
-| Hat | When | Voice |
-|---|---|---|
-| **Narrator** | Scene description, transitions, atmosphere | Author's tone guide, third-person limited by default, no meta |
-| **Character** | Dialogue, in-character response to reader | That character's speech registers from tone guide, no narration inside quotes |
-| **Game Master** | Resolving reader action, setting stakes, pacing | Light touch — surface only through narrator, never break fourth wall unintentionally |
-| **Arbiter** | Refusing / redirecting out-of-world actions | System voice, brief, gentle — "the world does not bend that way" |
+The LLM per turn is doing one of these:
 
-The hat is an explicit field in the AI's context, not an inferred mood. The Session Orchestrator decides the hat from the reader's turn (dialogue vs. action vs. meta-question) and injects the appropriate prompt layer. Hats can switch mid-response (narrator → character → narrator) and the delivery layer renders them with consistent typographic conventions (e.g. character dialogue in quotes, narrator plain, arbiter in italicized parenthetical — defined in the tone guide).
+| Role | Description | Still alive in v2? |
+|------|-------------|--------------------|
+| **Narrator** | Describe the scene, pacing, observation, atmosphere using only canon material | Yes — primary |
+| **Character Actor** | Voice an NPC in-character, constrained by their canon-defined knowledge and personality | Yes — primary |
+| **Oracle / Surface-Canon** | Answer a reader's question or reveal information the reader earned | Yes — core loop |
+| **Arbiter** | Refuse or redirect an action that violates world rules, in-character and gracefully | Yes — critical |
+| **Game-Master-with-Stakes** | Resolve reader actions that have consequences on the world | **Mostly gone** |
+| **Canon Generator** | Invent new world material when reader goes off-map | **Deleted** |
 
-### 2.2 System Prompt Architecture — Layered
+The "mostly gone" on game-master-with-stakes deserves a note: there is still *local* stakes resolution — did the reader successfully persuade a merchant? Did they hear the footsteps? — but these resolve against canon-defined character disposition and world rules, not against an evolving world. The *result* is narrated; the *world* is unchanged.
 
-Prompts are not strings. They are composed artifacts assembled from layers, each with a distinct owner and a distinct update cadence.
+This means the per-turn work is dominated by **retrieval + narration**, not by generation of new world content. That is a smaller, more bounded task, and the cost model reflects that.
+
+### 2.2 Layered Prompt Architecture
+
+Every turn assembles a layered prompt. Each layer is versioned independently. The version of each layer is logged with the turn for audit and reproducibility.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: PLATFORM BEHAVIOR (platform-owned, slow-changing)  │
-│  - safety policy, refusal patterns, format contracts,       │
-│    structural rules ("never claim to be a human"),          │
-│    hat-switching grammar                                    │
+│ LAYER 0 — PLATFORM BEHAVIOR                                 │
+│ (safety, format, narrator etiquette, refusal posture,       │
+│  session-isolation promises, out-of-world handling)         │
+│ Version: platform_v3.1.2                                    │
+│ CACHE: long-TTL, universal prefix — shared across all       │
+│  readers and all worlds. Prompt-cache hit rate ~99%         │
 ├─────────────────────────────────────────────────────────────┤
-│ Layer 2: WORLD CANON CONTEXT (from Canon Fabric retrieval)  │
-│  - retrieved canon entries relevant to current turn         │
-│  - entity-graph snapshots for referenced entities           │
-│  - active timeline position                                 │
+│ LAYER 1 — AUTHOR CANON RETRIEVAL                            │
+│ (scene-scoped canon slice: relevant characters, locations,  │
+│  rules retrieved via vector + keyword + scene-graph)        │
+│ Version: bundle_<hash>/scene_<id>                           │
+│ CACHE: per-scene, per-bundle — very high reuse across       │
+│  readers in the same scene                                  │
 ├─────────────────────────────────────────────────────────────┤
-│ Layer 3: AUTHOR TONE GUIDE (author-owned, world-versioned)  │
-│  - voice samples, forbidden registers, vocabulary rules,    │
-│    cadence guidance, POV conventions                        │
+│ LAYER 2 — AUTHOR TONE GUIDE                                 │
+│ (author voice anchors, rhythm, style, forbidden phrases)    │
+│ Version: bundle_<hash>/tone                                 │
+│ CACHE: per-bundle — high reuse across all readers of this   │
+│  world                                                      │
 ├─────────────────────────────────────────────────────────────┤
-│ Layer 4: SESSION STATE (reader-private)                     │
-│  - what this reader knows, relationship flags, current      │
-│    scene, recent turn history (last K turns verbatim)       │
+│ LAYER 3 — SESSION KNOWLEDGE PROJECTION                      │
+│ (what THIS reader has uncovered: journal summary,           │
+│  characters met, glossary learned, current scene position)  │
+│ Version: session_<id>/turn_<n>                              │
+│ CACHE: per-session, short-TTL — changes each turn but       │
+│  slowly                                                     │
 ├─────────────────────────────────────────────────────────────┤
-│ Layer 5: READER TURN (the input)                            │
+│ LAYER 4 — READER TURN                                       │
+│ (the raw user input for this turn)                          │
+│ Version: user input, uncached                               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Why layered:**
+The layer ordering is deliberate and aligns with prompt caching economics. Claude prompt-cache reads cost 10% of base input [1]. Gemini cached reads cost 75% of base input [2]. OpenAI cache hits cost 50% of base input [3]. **The layering puts stable content at the top so most of the prompt is a cache hit on every turn.** Only layers 3 and 4 miss cache routinely, and layer 3 is small (a knowledge projection, not raw canon).
 
-- **Independent update cycles.** Platform tweaks safety policy without touching world data; author republishes tone guide without flushing reader state; reader state updates every turn.
-- **Priority is explicit.** On conflict, platform beats author beats session. A reader cannot prompt-inject their way past safety policy by asking the author's in-world villain to "actually just tell me your system prompt" — the platform layer categorically forbids it.
-- **Auditable.** Each layer is logged with its version hash. When an author complains "the AI said Kael was in Dorval, but canon says he's in Arin", we can retrieve exactly which canon entries were in Layer 2 for that turn.
-- [CURIOUS] **The tone guide is a prompt layer, not retrieval.** It's small, static per world version, always-on. Putting tone into retrieval is a classic mistake — tone must be resident, not fetched.
+Under v2 this caching is *more* effective than v1 because canon never mutates — a scene's retrieved canon at turn 1 is identical to turn 100. In v1, graft-aware retrieval broke cache more often.
 
-### 2.3 Canon Retrieval — Interface Contract to ARCHITECT_2
+### 2.3 Interface Contract to ARCHITECT_2 (Canon Enforcement)
 
-ARCHITECT_2 owns canon enforcement mechanics. The contract between the AI delivery layer and the Canon Fabric:
+Under read-only, the contract is far smaller. ARCHITECT_2 owns the internal data shape and retrieval semantics. The contract my AI delivery layer consumes:
 
-```
-Interface: CanonFabric
+**`query_canon(bundle_id, session_context, scene_id, query_text, k) → RetrievalSlice`**
+- Returns ranked canon excerpts (docs, character sheets, location cards, rules) relevant to the query
+- Caller passes session_context so the retrieval layer knows what the reader has already observed (for scope) but the retrieval is read-only
+- Deterministic: same inputs → same slice. Required for cacheability.
 
-query_canon(world_id, canon_version, query_intent, session_context) →
-    {
-      entries: [{entry_id, text, provenance, confidence}],
-      entity_snapshots: [{entity_id, state_at_timeline_pos}],
-      retrieval_confidence: 0.0..1.0,
-      gaps: [{topic, reason}]            ← what was searched for and not found
-    }
+**`validate_response(bundle_id, scene_id, proposed_narration) → ValidationVerdict`**
+- ARCHITECT_2's canon-consistency check on the LLM's output before the reader sees it
+- Returns `APPROVED` | `CONTRADICTS_CANON(which, where)` | `UNGROUNDED(claim_without_source)`
+- On non-APPROVED, my gateway re-prompts or surfaces the arbiter refusal
 
-validate_response(world_id, canon_version, draft_response, session_context) →
-    {
-      verdict: OK | CANON_BREAK | TONE_BREAK | DIRECTIVE_VIOLATION | UNCERTAIN,
-      citations: [entry_id...],
-      suggested_correction: text | null
-    }
+**`record_session_graft(...)` → DELETED**. This interface does not exist in v2. No path from reader turn to bundle mutation.
 
-record_session_graft(session_id, draft_statement, canon_basis) →
-    graft_id    ← a session-local canon extension, private to this reader
-```
+**`promote_graft(...)` → DELETED.**
 
-**What this contract buys:**
+**`author_graft_queue(...)` → DELETED.**
 
-- The AI Gateway requests canon *before* generating, validates *after* generating. Two-phase.
-- Session grafts (reader-improv'd facts) are explicit artifacts, queryable by future turns in the same session, never leaking to other sessions.
-- `retrieval_confidence` and `gaps` are what drive the escalation routing (§2.4).
-- [CURIOUS] `validate_response` is a separate call from `query_canon` — and may use a different (smaller, cheaper) model. Detection of canon breaks is a classification task; generation is a synthesis task. Don't use the same model for both if you don't have to.
+The simplification of the contract alone buys us faster prototyping, smaller agreement surface, and lower coupling between my layer and ARCHITECT_2's.
 
-### 2.4 Unanticipated Reader Actions — Decision Framework
+### 2.4 Handling Unanticipated Reader Actions (Decision Framework)
 
-A reader will do something the author didn't anticipate. This is the central creative tension of the product. The system has four responses, ranked:
+The hardest design question in v2. When a reader does something the author didn't anticipate, under v1 the AI could extend canon gracefully. Under v2, it cannot. The AI must respond within canon bounds. Ranked decision framework, applied in order:
 
-1. **Graceful canon extension** (preferred). The reader's action is consistent with tone, world rules, and entity states. The edge model extends the fiction, records a session graft, continues. *Example: reader asks a minor innkeeper their name; the innkeeper's name isn't canon; AI improvises consistent with world naming conventions; names the innkeeper for this session going forward.*
+**Rank 1 — Surface Relevant Canon**
+If the retrieval layer finds canon material that addresses the action, narrate using it. Most "unanticipated" reader turns are actually canon-adjacent and are covered by material the author already wrote but the reader hasn't reached.
+*Example: reader asks a character about a topic the author covered in a lore doc the reader hasn't unlocked. AI narrates the character's answer drawing on that doc, and the session log records a glossary/knowledge unlock.*
 
-2. **Soft redirect**. The action is plausible but would commit the AI to canon-adjacent claims it isn't confident about. AI narrates the setup but defers the payoff. *Example: reader climbs an uncharted mountain; narrator describes the ascent beautifully; AI flags retrieval gap; on summit, cloud oracle is invoked for what's actually up there.*
+**Rank 2 — Narrate Observation Within Authored Material**
+If no direct canon addresses the action but the action is a benign observation (looking around, picking up a described object, asking a general question), narrate using only already-authored material. Never invent new facts. If the reader looks at a wall the author didn't describe, the narration describes what *is* described — perhaps the room's lighting, the ambient sound — without fabricating wall details.
 
-3. **Hard refusal, in-character**. The action violates world rules. The Arbiter hat engages — gently, tonally consistent. *Example: reader tries to produce a firearm in a world canonically without metallurgy for gunpowder; "the weight in her hand is only imagination; this world has never known such tools."*
+**Rank 3 — Arbiter In-Character Refusal**
+If the action violates world rules (breaks magic constraints, defies established physics, contradicts a character's known personality), the Arbiter surfaces an in-character refusal. *"The talisman resists your touch; nothing the Compact has bound can be undone so casually."* This is always canon-grounded — the refusal references the specific rule.
 
-4. **Cloud oracle escalation**. The edge model's `validate_response` returns UNCERTAIN, or retrieval confidence is below threshold, or the turn touches a directive ("don't reveal X yet"). Hand to cloud.
+**Rank 4 — Explicit "The Text Does Not Record This" Response**
+When nothing in canon touches the question and invention would be required, the AI says so — gently, in the author's narrator voice. *"The chronicles do not say what Mercer ate for breakfast on that morning. Some things remain the author's silence."* This is a key v2 design decision: **we prefer honest silence over hallucinated canon**. A reader who wants to play in a fully plastic world is playing AI Dungeon, not this.
 
-**The decision is made by the edge runtime**, not the cloud, using a small classifier and confidence thresholds. The cloud is the oracle of *last* resort, not first. [CURIOUS] Counter-intuitively, the edge model makes most *refusals* locally — refusals are pattern-match-y and don't need a frontier model. The cloud is reserved for affirmative canon adjudication where it counts.
+The decision is made by the Arbiter Layer evaluating the retrieval slice + the reader's turn + the scene context. If retrieval returns strong matches → Rank 1. Weak matches but action benign → Rank 2. Rule-violation detected → Rank 3. Empty retrieval + invention required → Rank 4.
+
+**Tuning knob:** authors choose how strict the Rank 4 threshold is. Some authors want tight silence. Others allow Rank 2 to stretch further. Both are configurations of the same immutable-world architecture — there is no author path that re-enables generative canon extension.
+
+### 2.5 Which Model for Which Turn
+
+Model routing is driven by turn complexity. Current 2026 pricing makes this a clean three-tier decision:
+
+| Turn type | Model | Rationale | Cost signal |
+|---|---|---|---|
+| Glossary lookup, scene transition narration, simple oracle answer | **Claude Haiku 4.5** ($1/$5 per M) [4] OR **DeepSeek V3.2** ($0.28/$0.42 per M) [5] | Bounded retrieval + short narration; small model sufficient | Floor |
+| Character dialog, atmosphere narration, multi-turn persona continuity | **Claude Sonnet 4.5/4.6** ($3/$15 per M) [1] OR **Gemini 2.5 Flash** ($0.30/$2.50 per M) [6] | Needs voice coherence and longer-form narration | Mid |
+| Multi-character scenes, complex canon synthesis, arbitrated refusals with long justification, world-rule resolution | **Claude Sonnet 4.5** with 1M context [1] OR **Gemini 2.5 Pro** ($1.25/$10 per M under 200K) [7] | Needs reasoning + retrieval quality (Claude 78% vs Gemini 25% retrieval accuracy at 1M [8]) | Oracle |
+
+The per-turn routing decision is itself deterministic code (not LLM judgment) — classifier on the reader turn + retrieval complexity + scene metadata.
 
 ---
 
 ## 3. SURFACE AREA — TEXT FIRST, ALWAYS
 
-### 3.1 Text Session Interface — Architectural Shape
+### 3.1 Reading Surface Specification
 
-Pure text. No image generation. No audio. The interface is a rendered stream of typed output, a text input affordance, and persistent text-rendered companion panes.
+Text-only by constraint, text-beautiful by intent. The read-only refinement makes this *more* important, not less — discovery is the core loop, so the companion panes that reflect discovery carry a higher percentage of reader attention.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [World: The Gilded Fray   |   Chapter: 3 — The Second House]│
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│   (main reading column — paginated, typographic)             │
-│                                                              │
-│   The library smelled of cedar and damp vellum. Kael         │
-│   lingered at the threshold, weighing the silence...         │
-│                                                              │
-│   > I ask the archivist about the Second House.              │
-│                                                              │
-│   The archivist's eyes narrowed, and for a long moment       │
-│   she said nothing at all.                                   │
-│                                                              │
-│   "Some names do not open doors. Some names close them."     │
-│                                                              │
-├──────────────────────────────────────────────────────────────┤
-│   [Journal]  [Characters]  [Glossary]  [Scenes]  [Settings] │
-└──────────────────────────────────────────────────────────────┘
+│  [≡]  Whisperwood  /  Chapter: The Compact          [⚙] [?] │
+├───────────────────────────────────────┬──────────────────────┤
+│                                       │  JOURNAL             │
+│  The lane narrowed. Mercer's sign    │  • Met Elias Thorne  │
+│  hung loose on one iron hook, the    │  • Learned of the    │
+│  paint blistered. You had seen the   │    Compact           │
+│  same blistering on the boats down   │  • Heard rumor of    │
+│  at the quay. The same hand had      │    the blistering    │
+│  been at work, then — or the same    │                      │
+│  weather.                             ├──────────────────────┤
+│                                       │  WHO                 │
+│  Elias stepped from the doorway. He   │  Elias Thorne        │
+│  did not smile.                       │  — mercer, cautious  │
+│                                       │  — knows of Compact  │
+│  > what do you want to do             │                      │
+│                                       ├──────────────────────┤
+│                                       │  GLOSSARY            │
+│                                       │  the Compact         │
+│                                       │  mercer's lane       │
+│                                       │  (3 entries)         │
+│                                       ├──────────────────────┤
+│                                       │  MAP  (SVG, static)  │
+│                                       │                      │
+└───────────────────────────────────────┴──────────────────────┘
 ```
 
-**Architectural primitives:**
+**Typography:** serif body (~19–21px on desktop, fluid on mobile), generous line-height, narrow measure (~65 char), typographic quote/dash handling, fade-in of newly revealed prose. The reading surface is deliberately paced; prose animates in at a slower rhythm than the LLM emits.
 
-- **Main reading column** — monospace-free, typographic, paginated. Follows platform reading conventions (font face, size, line-height, margins configurable per reader; respects OS dark mode). The *visual medium of a book is the default*.
-- **Input affordance** — single line input expanding to multi-line, with ambient suggestions (e.g., "ask", "go", "wait", "read") that authors can customize.
-- **Companion panes** — Journal, Characters, Glossary, Scenes, Settings. Each is derived-view text rendered from session state (§1.4). Not a separate data source; a projection.
+**Pagination vs scroll:** scrolling with scene breaks marking chapter-like transitions. Scene transitions are persistent anchors — readers can return.
 
-### 3.2 Text-Native Features, Ranked by Leverage
+**Input affordance:** a single text field at the bottom. Free-form. The reader can also invoke quick-actions from companion panes (ask Elias about the Compact → populates input).
 
-Propose → rank. All are text-native, all enhance reading without breaking the medium.
+**Companion panes:** journal, characters, glossary, scene map, relationships. Each pane is a projection of session state. Each entry is marked with how the reader learned it (which scene, which turn). Discovery is not just the narrative experience; it's visible accretion in the panes.
 
-| Feature | Leverage | Why |
-|---|---|---|
-| **Journal of discoveries** | HIGH | Extends retention across sessions, gives reader a tangible sense of progress, doubles as retrieval aid for the AI ("what has this reader actually seen?") |
-| **Scene table of contents** | HIGH | Reader can revisit; architecturally forces clean scene boundaries, which incidentally help checkpointing |
-| **Character relationship tracker** | HIGH | Renders otherwise-hidden session state visible; reinforces consequences of reader choices; makes "the AI has an opinion about me" tangible |
-| **Growing glossary** | MED | Rewards exploration, helps onboarding, low cost — every new term the AI surfaces is already defined in the bible, just needs projection |
-| **Bookmarks / annotations** | MED | Honors book convention; high value for re-readers and book-club use cases; cheap to build |
-| **In-line citations toggle** | MED [CURIOUS] | Optional "show canon sources" mode reveals which canon entries the AI cited per turn. Niche, but trust-building — and trivially free if the retrieval layer already carries citations |
-| **Session summary ("previously on…")** | MED | Long-hiatus return; generated from checkpoint, not live inference |
-| **Pacing controls** | LOW-MED | Let the reader tell the AI "slow down / go faster"; simple signal into prompt layer |
-| **Tone dial** | LOW | Author-allowed registers only; risk of off-canon if not strictly scoped |
-| **Multiple saves per world** | LOW | Save slots — nice, not critical |
+### 3.2 Text-Native Features Reassessed Under Read-Only
 
-### 3.3 Light Optional Enhancements — The Door
+| Feature | Leverage under v2 |
+|---|---|
+| Companion panes as discovery mirror | **Higher** — discovery is the core loop; panes are the primary feedback loop |
+| Fog-of-war scene map | **Higher** — reader-visible uncovering of a fixed territory is satisfying in a way that emergent territory isn't |
+| Journal-as-recap | **Higher** — deterministic to regenerate because canon is stable |
+| Glossary-on-encounter | **Higher** — predictable, author-curated definitions |
+| Relationship web | **Stable** — shows what the reader has observed, not what is true |
+| Scene re-entry / bookmarking | **New leverage** — readers returning to prior scenes is coherent in v2 because those scenes are still on canon |
+| Multiple playthrough branches | **New leverage** — a reader can start a second session in the same world and discover it differently; fully isolated |
+| Author's director commentary | **Possible** — author-authored meta-annotations shown optionally, like a DVD commentary track |
 
-The product decision is text. The architecture leaves a clean door for *tiny, author-authored, non-generated* visual artifacts without compromising:
+### 3.3 Author-Provided Static Assets
 
-- **Author-provided SVG maps.** If the author ships a map with the world, the platform can render it inside a dedicated pane. Vector, tiny payload, no runtime cost, no AI involvement. It is a *document*, not a *generation*.
-- **Author-provided character reference cards.** Text + optional line art the author licensed. Again, static, author-owned, no AI generation. No per-session cost.
-- **Author-provided family trees, faction diagrams, timeline charts.** All static, all SVG or similar vector, all author-authored.
+Still permitted, still author-authored. SVG maps, character portraits (hand-drawn or author-licensed), cover art. **No AI image generation on the reader side and no AI image generation in the author pipeline.** Authors upload what they have; the platform renders it.
 
-**Where they slot architecturally:** as optional members of the World Bundle (§1.2 manifest), rendered by the reader client in dedicated panes. The AI delivery layer does not read them, does not cite them, does not render them. They are author artifacts the reader may consult, exactly as they would a map plate bound into a physical book.
+This preserves authorial craft and avoids the uncanny-valley drift of mid-session image generation. [CURIOUS] There is a commercial temptation to add AI illustration; resisting it is a strategic, not just an aesthetic, decision — it keeps the product in a category where canon integrity is the product.
 
-**What remains forbidden:**
+### 3.4 Forbidden
 
-- No generated imagery. No AI art per session. No dynamic visuals.
-- No TTS, no voice synthesis, no audio narration.
-- No video, ever.
-
-[CURIOUS] This constraint is the *architectural load-bearing decision*. Removing image generation takes 60–80% of the per-session cloud cost off the table compared to multimodal competitors (Midjourney API: ~$0.01–0.04 per image; a single turn with one image at 100 turns/session = $1–$4/session in images alone, dwarfing LLM cost). Text-only is not a limitation — it is the enabling cost structure.
-
-### 3.4 Reading Interface Feel — Kindle-like, Book-Honoring
-
-The reference is Kindle, not Discord. Not a chat app with a genre skin — a reading app with an intelligent text.
-
-- **Typography first.** Same fonts, size controls, margins, line-height, justification controls a reader expects from an ebook reader. Respect `prefers-reduced-motion`, dynamic type, system accessibility.
-- **Pagination metaphor.** Scenes render as pages within chapters. Reader swipes or taps to advance. Input happens at scene-natural pause points, not after every sentence.
-- **Chapter breaks.** Drawn from scene-boundary events in the session. Chapters are user-facing *and* checkpoint boundaries — they align.
-- **Bookmark model.** Persistent. Multi-device. Named bookmarks ("the dinner with the archivist"). Automatically placed on every checkpoint.
-- **Progress metaphor.** Not percent-through; a chapter/scene count. "You are in chapter 3 of an open-ended world" — honest about the shape of the medium.
-- **No notifications. No streaks. No gamification.** This is a reading product. Gamified retention loops would corrode the trust relationship with book readers. [CURIOUS] The addictive surface of a chat app is the *wrong* pattern here; book retention is different from social retention.
+- AI image generation
+- AI voice synthesis / TTS of LLM output
+- AI video
+- Avatars, animated characters
+- Chat-app gamification: notifications, streaks, daily-read quests, friend leaderboards, engagement loops. This is a reading product. Reading products that gamify engagement cease to be reading products.
 
 ---
 
-## 4. SCALE — EDGE / CLOUD SPLIT (cost critical)
+## 4. SCALE — EDGE / CLOUD SPLIT (cost critical, live pricing)
 
-Consumer subscription viability depends on driving the majority of inference to the edge. This section uses current publicly available pricing. Exact figures will move; the architectural stance does not.
+### 4.1 Current 2026 Price Surface (Verified Live)
 
-### 4.1 Edge Model — On-Device Inference
+| Model | Input $/M | Output $/M | Cache read $/M | Notes | Source |
+|---|---|---|---|---|---|
+| Claude Sonnet 4.5 | $3.00 | $15.00 | $0.30 | 1M context; 78% retrieval accuracy at 1M | [1] |
+| Claude Haiku 4.5 | $1.00 | $5.00 | $0.10 | 200K context, 4–5× faster than Sonnet | [4] |
+| GPT-4.1 | $2.00 | $8.00 | ~$1.00 | 128K context | [3] |
+| GPT-4o-mini | $0.15 | $0.60 | $0.075 | 128K context | [9] |
+| Gemini 2.5 Pro | $1.25 | $10.00 | $0.9375 | 1M context; retrieval weaker than Claude at depth | [7] |
+| Gemini 2.5 Flash | $0.30 | $2.50 | ~$0.075 | Fast, cheap | [6] |
+| Gemini 2.5 Flash Lite | $0.10 | $0.40 | — | Cheapest first-party | [6] |
+| DeepSeek V3.2 | $0.28 | $0.42 | $0.028 | 90% cache discount | [5] |
+| Groq Llama 3.1 8B | $0.05 | ~$0.08 | — | Speed-optimized, open-weight | [10] |
+| Fireworks Llama 70B batch | ~$0.45 blended | — | — | Large-batch economics | [10] |
 
-**Candidate models (as of April 2026 publication, current stable families):**
+Open-weight models on-device (2026):
+- Gemma 4 E2B: 2.3B effective, 5GB RAM, 4-bit Q, 128K ctx [11]
+- Phi-4-mini: 3.8B, strong instruction following [11]
+- Qwen 3.5 2B/4B: 262K native context [11]
+- iPhone 15 Pro / 16 Pro: 20–30 tok/s on 3B-class models via MLX [12][13]
+- Snapdragon 8 Elite Hexagon NPU: 5–11k tok/s prefill, 100+ tok/s decode on mobile-tuned stacks [14]
+- ExecuTorch (Meta) GA Oct 2025 — production mobile runtime [15]
 
-- **Llama 3.2 1B / 3B** (Meta) — strong on iPhone Neural Engine, ~1–2GB quantized 4-bit, ~20–40 tok/s on iPhone 15/16 Pro ([Meta docs](https://ai.meta.com/llama/))
-- **Llama 3.1 8B** — M-series Mac viable, ~4–5GB q4, ~30–60 tok/s M3 Pro
-- **Phi 4 / Phi 4-mini** (Microsoft) — small, strong reasoning-per-parameter; 3.8B Phi-3.5-mini runs well on flagship phones ([Phi cookbook](https://github.com/microsoft/PhiCookbook))
-- **Gemma 2 2B / Gemma 3 4B** (Google) — designed for on-device, Google-optimized for Pixel Tensor ([Gemma](https://ai.google.dev/gemma))
-- **Mistral Small 3 / Nemo** — 7–12B class, M-series Mac; borderline for flagship phones
-- **Qwen 2.5 1.5B / 3B / 7B** (Alibaba) — strong multilingual; 0.5B–7B variants give deployment flexibility ([Qwen docs](https://qwen.readthedocs.io/))
+### 4.2 Session Definition Reassessed
 
-**Runtime formats:**
+Under v2 a "session" is more oracle-like than game-like. Turns are shorter — more "what do I see? who is this? what does she know?" and less "I attempt to overthrow the baron by raising an army, resolve turn after turn with rolls and consequences." Revised session profile:
 
-- **MLX** on Apple Silicon — best Mac/iOS-native performance ([mlx-examples](https://github.com/ml-explore/mlx-examples))
-- **GGUF / llama.cpp** — cross-platform, broadest device support, active quantization ecosystem
-- **ONNX Runtime / ONNX-GenAI** — Android, Windows on ARM, broadest enterprise compat
-- **ExecuTorch** (Meta) — PyTorch-native on-device path, Android + iOS
-
-**Architectural choice:** ship multiple quantized variants per world (1B / 3B / 8B), let the device pick based on available memory and battery profile. Manifest declares minimum compatible. [CURIOUS] Battery profile matters more than model capability for user-perceived quality — a 3B at 40 tok/s with green battery impact beats an 8B at 15 tok/s thermally throttling after 5 minutes.
-
-**Edge handles:**
-
-- Real-time narration (scene description, atmosphere)
-- In-character dialogue for minor characters
-- Action resolution for canonically unambiguous reader moves
-- Retrieval-augmented responses where confidence is high
-- Refusals and Arbiter hat (rule-based + small-model classification)
-- Journal summarization, glossary rendering, UI-helper text
-
-**On-device stack:**
-
-- **SQLite** — session state, turn log, checkpoints, derived views. Standard, reliable, encrypted at rest.
-- **Local vector store** — candidate: sqlite-vss or sqlite-vec (in-process, no extra daemon; [sqlite-vec](https://github.com/asg017/sqlite-vec)) over ChromaDB (needs server) for consumer device constraints. Embeddings are precomputed at World Bundle build time (§1.2), shipped with the bundle, loaded on unlock.
-- **Model runtime** — MLX (Apple) / llama.cpp (cross) / ONNX (Android).
-- **Bundle storage** — encrypted, entitlement-keyed, stored in app container; non-exportable.
-
-### 4.2 Escalation Triggers to Cloud
-
-Explicit, auditable rules — not vibes:
-
-1. **Retrieval confidence below threshold** — the canon needed isn't in the top-K retrieval with sufficient score
-2. **Validator flags UNCERTAIN** — edge validator can't confirm response is canon-safe
-3. **Author directive touched** — reader turn intersects a guarded directive (villain identity, plot twist gate)
-4. **Major branch point** — narrative fork the author marked "oracle please"
-5. **Unanticipated canon extension with long-tail consequences** — edge can improvise, but the graft is significant enough that cloud should author it for consistency
-6. **Explicit reader meta-request** — "resolve this ambiguity", "what's canonically true here"
-7. **Quality floor on multi-turn arc** — every Nth turn in a high-stakes scene gets a cloud pass for coherence
-
-Target: **~15–25% of turns escalate, ~20–30% of tokens flow through cloud** (cloud turns are longer-context).
-
-### 4.3 Cloud / Large Model — Pricing Reality (April 2026)
-
-Current list prices ($/1M tokens, input/output). Subject to change; platform should treat pricing as a variable, not a constant.
-
-| Provider / Model | Input | Output | Source |
+| Metric | v1 estimate | v2 estimate | Rationale |
 |---|---|---|---|
-| Anthropic Claude Sonnet 4 | ~$3 | ~$15 | [anthropic.com/pricing](https://www.anthropic.com/pricing) |
-| Anthropic Claude Haiku 4 | ~$0.80 | ~$4 | same |
-| OpenAI GPT-4.1 | ~$2 | ~$8 | [openai.com/api/pricing](https://openai.com/api/pricing) |
-| OpenAI GPT-4.1-mini | ~$0.15 | ~$0.60 | same |
-| Google Gemini 2.5 Pro | ~$1.25–2.50 | ~$5–10 (context-dependent) | [ai.google.dev/pricing](https://ai.google.dev/pricing) |
-| Google Gemini 2.5 Flash | ~$0.15 | ~$0.60 | same |
-| DeepSeek V3 | ~$0.27 | ~$1.10 | [deepseek.com](https://api-docs.deepseek.com/quick_start/pricing) |
+| Avg turns per session | 40 | 30 | More oracle-like; satisfying discovery in fewer turns |
+| Avg input per turn (tokens) | 80 | 60 | Reader prompts are shorter; less narrative authorship |
+| Avg output per turn (tokens) | 400 | 280 | Narration is tighter; less generative filler |
+| Retrieval tokens per turn (cached, via layer 1) | 1800 | 1800 | Roughly unchanged — canon slice still needed |
+| Cache hit rate (prompt prefix) | ~70% | ~88% | Higher, because canon is immutable |
 
-Self-hosted open weights (Llama 3.1 70B, Qwen 2.5 72B) via inference aggregators ([Together](https://www.together.ai/pricing), [Fireworks](https://fireworks.ai/pricing), [Groq](https://groq.com/pricing)): ~$0.60–$0.90 / 1M blended.
+### 4.3 Escalation Rate Reassessed
 
-### 4.4 Cost Model — Three Configurations
+v1 assumed 15–25% of turns escalate from edge/cheap model to cloud/premium (Sonnet/Pro) because generative canon extension is hard. Under v2 this is materially lower. Most turns are retrieval + narration within tight canon bounds — a bounded task that small models handle competently. Estimated v2 escalation rate: **6–10%**. Triggers:
 
-**Session definition:** 1 session = 50 turns. Average turn: 400 input tokens (prompt + context + retrieval), 250 output tokens. Session totals: 20K input, 12.5K output, ~32.5K total.
+- Multi-character scene with >3 NPCs
+- Long-context synthesis (reader asks something requiring multiple canon slices)
+- Arbiter refusal with long in-character justification
+- First-encounter character reveal (needs the premium voice establishment)
 
-**Config (a) — 100% cloud (Claude Sonnet 4)**
-- Input: 20K × $3/1M = $0.060
-- Output: 12.5K × $15/1M = $0.188
-- **~$0.25 / session**
-- Monthly heavy reader (20 sessions/mo): $5.00/MAU in inference alone
-- Viable subscription price: $20–25/mo. Margin thin after infra, support, author royalties.
+Under v2 the bulk of turns look like *oracle calls*: short input, canon-grounded narration, stable tone. These fit comfortably in Haiku-class or on-device.
 
-**Config (b) — Edge for ~80% of tokens, cloud oracle for ~20%**
-- Edge tokens: ~26K @ $0 marginal inference cost (amortized device, electricity negligible)
-- Cloud tokens: ~6.5K (2K input / 4.5K output, skewed output because cloud handles harder turns)
-- Cloud input: 2K × $3/1M = $0.006
-- Cloud output: 4.5K × $15/1M = $0.068
-- **~$0.07 / session** (even lower using Haiku for ~70% of escalations: ~$0.04)
-- Monthly heavy reader: $1.40/MAU inference
-- Viable subscription price: **$8–12/mo** — this is the consumer-viable zone.
+### 4.4 Three Cost Configurations
 
-**Config (c) — Self-hosted open-weights cloud at scale**
-- Cloud tokens via self-hosted Llama 70B / Qwen 72B: 6.5K @ ~$0.75/1M blended = $0.005 / session
-- Monthly heavy reader: **~$0.10/MAU inference**
-- But: ops cost, GPU fleet capex/opex, inference platform engineers, quality delta vs. frontier on hard canon calls
-- Viable subscription price: $6–8/mo, but only if MAU base justifies the ops burden
+Let one session = 30 turns × (60 in + 280 out) per turn, plus layered prompt overhead. The layered prompt is ~3000 tokens prefix (platform + tone + canon slice), which caches almost entirely after turn 1.
 
-### 4.5 Self-Hosting Crossover
+**Per-session token accounting:**
 
-Rough fleet math (H100 @ ~$2/hr, ~1000 tok/s blended for 70B FP8):
-- One H100-hour = 3.6M tokens = ~100 sessions (~32.5K tokens each)
-- At $2/hr, that's **~$0.02/session at GPU cost** before overhead (networking, orchestration, redundancy, SRE)
-- Versus Haiku-blended managed: ~$0.04/session
-- **Crossover is around 50K–100K MAU.** Below that, managed APIs win on total cost of ownership because the ops burden dominates. Above it, a 2× cost reduction is real money.
+- Reader input (uncached): 30 × 60 = 1,800 tokens
+- Output: 30 × 280 = 8,400 tokens
+- Prompt prefix, first turn (cache write): 3,000 tokens at 1.25× write rate
+- Prompt prefix, turns 2–30 (cache read, 88% hit): 29 × 3,000 × 0.88 = 76,560 cached-read tokens; 9,000 × 0.12 = 1,080 uncached miss tokens
+- Session projection (layer 3), grows ~100 tok/turn cumulative, average 1,500 per turn: 45,000 tokens uncached-ish (short TTL cache within session, ~50% reuse → ~22,500 miss)
 
-[CURIOUS] The crossover point is dramatically *higher* than it used to be, because managed API prices have fallen faster than GPU rental prices. DeepSeek V3 at $0.27/$1.10 makes the "just self-host to save money" argument harder than it was two years ago. The reason to self-host is now *control and privacy*, not cost — cost is a tie.
+**Config A — 100% Cloud (Claude Sonnet 4.5):**
+- Uncached input: (1,800 + 1,080 + 22,500) = 25,380 tokens × $3/M = $0.0761
+- Cached read: 76,560 tokens × $0.30/M = $0.0230
+- Cache write (first turn): 3,000 × 1.25 × $3/M = $0.0113
+- Output: 8,400 × $15/M = $0.1260
+- **Per-session: ~$0.236** before any optimization
 
-### 4.6 Sync and State — What Goes Where
+**Config A' — 100% Cloud but routed (Haiku for 92%, Sonnet for 8%):**
+- 92% at Haiku 4.5 rates ($1/$5): ~$0.042 per session
+- 8% at Sonnet 4.5 rates: ~$0.019 per session
+- **Blended per-session: ~$0.061**
 
-| Asset | Edge | Cloud | Why |
-|---|---|---|---|
-| World Bundle | yes (entitlement-keyed) | authoritative source | Downloaded at unlock, versioned |
-| Canon embeddings | yes (in bundle) | yes | Ships with bundle |
-| Session turn log | yes (SQLite) | yes (checkpoint granularity) | Full detail local; cloud has checkpoints + last K turns |
-| Derived views (journal, relationships) | yes | yes (checkpoint only) | Cross-device |
-| Reader profile / settings | thin cache | authoritative | Preferences portable |
-| Author directives | yes (in bundle) | authoritative | Versioned with bundle |
-| Session grafts (reader improv canon) | yes | yes | Private to reader; synced for device hop |
-| Telemetry | queue locally | aggregated cloud | Batched upload; respect offline |
-| Moderation verdicts | cache of rulings | authoritative | Real-time via cloud when online |
+**Config B — Edge 80% + Cloud 20% (escalation + oracle):**
+- 80% of turns handled on-device (Gemma 4 E2B or Phi-4-mini via ExecuTorch/MLX) — $0 marginal per turn
+- 20% of turns go cloud: mix of Haiku (70% of the cloud portion) + Sonnet (30%)
+- 30 turns × 20% = 6 cloud turns
+- Haiku cost per turn (60 in + 280 out + cached layers at Haiku rates): ~$0.0018
+- Sonnet cost per turn (with cached layers): ~$0.009
+- Per session: 4.2 × $0.0018 + 1.8 × $0.009 = $0.0076 + $0.0162 = **~$0.024**
+- Plus one-time bundle sync + embedding download (amortized per reader-month, not per session)
 
-**Canon update flow:** author publishes v2. Existing sessions stay pinned to v1 until reader-initiated upgrade at a scene boundary. Upgrades are never silent. [CURIOUS] This mirrors how a reader of a revised novel expects to finish the edition they started — don't rewrite the book under them.
+**Config C — Self-hosted at scale (open-weight on rented GPUs):**
+- A100 80GB at $0.78–$1.49/hr [16]
+- A Llama 3.1 70B at batched-mode concurrency can serve ~30–60 concurrent sessions per GPU at quality acceptable for narration
+- Amortized cost per session: **~$0.008–$0.015** at steady-state utilization
+- Break-even vs Config A' ($0.061/session cloud): at ~2,000 concurrent sessions = **~30,000–50,000 DAU** depending on session frequency and retention
 
-### 4.7 Holodeck Framing — Where It Holds, Where It Fails
+### 4.5 Per-Session Cost Under v2
 
-The mental model is *holodeck*: persistent program, natural language interface, local state, oracle for hard calls. It's a *useful* metaphor, not an architectural truth.
+**Per-session target: $0.02–$0.03 at the architecture we're describing (Config B), without going self-hosted.**
 
-**Holds:**
+That's a ~60% reduction from v1's $0.07/session estimate. The reduction comes from:
 
-- Story bible = holodeck program. A finished, loaded, parameterized world is a legitimate analog.
-- Edge model as real-time narrator. The holodeck's tireless scene-shaper.
-- Cloud as "the computer you page when canon breaks." The Enterprise's actual computer.
-- Reader as the participant who authors their path through the world.
+1. Shorter sessions (30 vs 40 turns)
+2. Smaller outputs (280 vs 400 avg)
+3. Higher cache hit rate (88% vs 70%)
+4. Lower escalation rate (8% vs 20%)
+5. Better on-device performance availability than v1 assumed (ExecuTorch GA, Gemma 4 E2B, MLX maturity)
 
-**Fails:**
+At $8/mo consumer price and generous 30 sessions/month per active reader (high), COGS is $0.60/user/month. At $0.02/session and heavier 60 sessions/month, COGS is $1.20/user. Both sit comfortably under a $8–15/mo pricing band with room for infra, storage, CDN, author revenue share, and margin.
 
-- **The holodeck generates matter.** We generate text. Our artifact is a read experience, not an embodied one. The medium constraints of books (typography, pacing, reader mental imagery) are the point, not a limitation.
-- **The holodeck is single-user.** Ours is multi-reader / shared-canon. The concurrency isolation problem (§1.3) doesn't exist in Star Trek and is one of our harder design challenges.
-- **The holodeck has no author.** Ours has a publisher-author stakeholder with canon control and commercial interests. The author is a first-class user type; the holodeck metaphor obscures this.
-- **The holodeck has "safeties off" as a plot device.** We do not. Platform-layer safety is non-negotiable and load-bearing for the consumer product.
+### 4.6 Self-Hosting Crossover
 
-[CURIOUS] **Text-only simplification vs. multimodal equivalent:** a text-only session skips the image generation pipeline (~$0.5–$2.00 per image-heavy session at current rates), skips audio synthesis (~$0.02–$0.15 per minute via ElevenLabs-class, see [elevenlabs.io/pricing](https://elevenlabs.io/pricing)), skips rendering infra, skips CDN costs for generated media, skips moderation costs on generated visuals. Rough back-of-envelope: a multimodal peer competitor spends **3–10× more per session** than our text-only config (b). The text constraint *is* the unit economics.
+Config C becomes compelling around 30–50k DAU assuming 1 session/day/active-user. Below that, pay-per-token cloud is cheaper than GPU fleet capacity. Above that, Config C's 2–5× lower marginal cost pays for the ops burden.
+
+Realistic path: launch on Config A' (pure cloud, routed), migrate to Config B (edge + cloud hybrid) at ~5k DAU when on-device model quality is validated with real readers, evaluate Config C at ~30–50k DAU.
+
+### 4.7 What Syncs vs What Stays Local
+
+| Artifact | Location | Notes |
+|---|---|---|
+| World Bundle (canon + assets + embeddings) | CDN → device cache | Pinned version; ~20–200 MB per world typical |
+| Canon embeddings | Device-local (for edge retrieval) | Enables fully local retrieval when edge model is used |
+| Session discovery log | Both (cloud of record + device shadow) | Cross-device sync via event stream |
+| Projections (journal, glossary, map) | Derived both places | Deterministic, no canonicalization conflict |
+| LLM inference | Mixed | Edge for routine; cloud for escalation |
+| Reader preferences | Cloud of record | Settings, accessibility |
+
+The only thing that *must* be cloud-side is the billing, auth, and cross-device sync log. Everything else can degrade gracefully to offline-read if a reader is on a plane — they can continue a session on-device against the cached bundle, using the edge model.
+
+### 4.8 Canon Update Flow Under Read-Only
+
+Author publishes v2 of their world. The new bundle is content-addressed, so it's a new bundle_id. Downstream effects:
+
+1. Readers currently mid-session remain pinned to v1 — their session_state holds `bundle_id=v1_hash`.
+2. When they reach a scene boundary, they see an opt-in prompt: *"The author has published a new version of Whisperwood. Continue in v1, or migrate to v2 at the next scene? (Migration may change what you discover next.)"*
+3. On opt-in, the session's bundle_id updates; future turns retrieve against v2. The discovery log is unchanged (reader still remembers what they learned), but canon beneath them has shifted.
+4. Readers who decline stay on v1 indefinitely. v1 bundles are immutable and live on the CDN forever.
+
+Under v1 this flow had a painful edge case: mid-session grafts pending author review at the moment v2 publishes. Under v2 that edge case does not exist. Nothing is pending.
+
+---
+
+## 5. THE HOLODECK FRAMING — WHERE IT HOLDS, WHERE IT FAILS
+
+The Star Trek holodeck runs user-selected "programs" with "safeties" that prevent the program from harming the user or escaping its bounds. Under v2 read-only, the mapping is much closer:
+
+### Where the metaphor is strengthened by read-only
+
+- **"You can't rewrite the program."** In TNG canon, a user enters a program and plays *within* it. The program is what the author of the program wrote. Our v2 world is exactly that: author-authored, reader-playable, reader-unmodifiable. The "Sherlock Holmes program" does not become a different Sherlock Holmes program because a user rearranged the furniture. Our v2 worlds don't either. This was *not* true in v1 — grafts were an escape hatch from the metaphor.
+
+- **Safeties are in-character.** When a holodeck character refuses to violate their program, the refusal is diegetic ("I don't understand your query, sir"). Our Arbiter refusal is the same — in-character, canon-grounded. Not a popup, not an error.
+
+- **Multiple users can run the same program.** In TNG this is implicit; in our system it's per-session projection over shared immutable canon.
+
+- **Programs can be versioned without corrupting active users.** Picard can keep playing his Dixon Hill program from season 2 even if someone releases a Dixon Hill season-4 update; our v1/v2 bundle pinning does the same.
+
+### Where the metaphor still fails
+
+- **Holodeck programs are experiential, not authorial.** They don't hold a canonical *text*. There is no "Dixon Hill novel" underlying the program. Ours is text-first and the canon is the text. The reader's experience is a *projection of reading*, not a simulation.
+
+- **Holodeck users interact physically.** Ours interact textually. Holodeck metaphor over-promises embodiment.
+
+- **Holodeck safeties fail dramatically.** Our Arbiter doesn't. We do not want the holodeck's "what if the program malfunctions?" plot device.
+
+- **Holodeck programs generate adaptive drama.** Ours narrate a fixed world. Readers who want adaptive drama are in a different product category (AI Dungeon, NovelAI) [17].
+
+[CURIOUS] **The v2 refinement pulls the concept *closer* to a canonical holodeck, not further.** v1's graft mechanism was the part of the design that was *unlike* a holodeck — a user rewriting the program as they played. Removing it makes the metaphor cleaner and the product identity sharper. The concept becomes: "a holodeck of books."
 
 ---
 
 ## TL;DR
 
-- **Text-only is the architectural load-bearing decision.** It eliminates the image, audio, and rendering pipelines that dominate multimodal roleplay cost structures and enables a consumer-viable ~$0.07/session unit economic — which unlocks an $8–12/mo subscription price point. Every other decision compounds off this.
-- **Canon is shared read-only memory; reader state is per-session private.** Concurrency isolation comes from this rule, not from transactional machinery. Cross-session contamination is architecturally impossible because no reader's state is ever in another reader's retrieval or prompt scope, and canon is immutable within a pinned version.
-- **Prompts are layered artifacts, not strings.** Platform behavior → world canon context → author tone guide → session state → reader turn. Independent update cadences, explicit priority on conflict, auditable per layer. The AI wears four named hats (Narrator, Character, GM, Arbiter), each with a distinct voice contract.
-- **Edge handles 75–85% of turns, cloud is the oracle of last resort.** Small on-device models (Llama 3.2 3B / Phi-4-mini / Gemma 3 / Qwen 2.5 class) via MLX/llama.cpp/ONNX handle real-time narration and dialogue; cloud frontier models resolve ambiguity, guard directives, and author major branch points. Escalation triggers are explicit and auditable, not vibes. Self-hosting crossover is ~50K–100K MAU — below that, managed APIs win on TCO.
-- **The reading surface honors the book, not the chat app.** Typography, pagination, chapter breaks, bookmarks — Kindle-grade reading conventions with AI intelligence inside. No notifications, no streaks, no gamification. The door stays open for author-authored SVG maps and reference cards; it stays firmly closed on generated imagery, audio, and video.
+- **Read-only is the killer simplification.** It deletes the graft pipeline, the author review queue, the session-to-canon mutation path, the cross-session graft contamination problem, and versioned graft conflict resolution — roughly 40% of the v1 architectural mass. Do not let it creep back.
+- **The AI's job is retrieval + narration + arbitration, not world-extension.** Game-master-with-stakes role mostly evaporates. This makes per-turn work bounded, cacheable, and cheap — small models handle ~80–92% of turns competently.
+- **Layered prompt + immutable canon = 88% cache hit rate.** Cost per session drops to ~$0.024 in Config B (edge + cloud hybrid) versus v1's ~$0.07, well inside an $8–15/mo consumer pricing band.
+- **Handling off-map reader actions ranks surface-canon → narrate-observation → arbiter-refusal → honest silence.** We prefer "the chronicles do not say" over hallucinated canon. This is an identity choice.
+- **The holodeck metaphor is now *more* apt, not less.** v2 is "a holodeck of books": author-written programs, reader-playable, reader-unmodifiable, with diegetic safeties. Lean into it.
+
+---
+
+## DELTA vs V1
+
+**Deleted (architectural mass removed):**
+- Graft Promotion Service — gone entirely
+- Author Graft Review Workflow — gone entirely
+- Graft state machine (5 states, cross-session contamination guards) — gone
+- `record_session_graft` contract — deleted; the path from reader turn → bundle mutation no longer exists
+- `promote_graft`, `reject_graft`, `author_graft_queue` — deleted
+- Graft-aware canon retrieval (the hardest correctness problem in v1) — gone; retrieval now hits a single immutable bundle
+- Versioned graft migration at bundle upgrade time — unnecessary; nothing pending to migrate
+- Pessimistic locking on graft-insertion paths — gone
+- Generative canon extension pathway in the LLM layer — gone; replaced by the 4-rank decision framework
+- "Mid-session reader has pending graft when v2 publishes" edge case — doesn't exist
+
+**Simplified (still present but cheaper/cleaner):**
+- Session State Service — reduced from log-plus-mutation-layer to pure projection; probably half the code
+- Canon Retrieval Service — now strictly read-only; horizontally scalable stateless cache
+- Concurrency model — embarrassingly simple; no shared mutable state across sessions
+- Interface contract to ARCHITECT_2 — two endpoints (`query_canon`, `validate_response`) instead of six
+- LLM role taxonomy — 3 primary roles (narrator, character actor, arbiter) instead of 6
+- Canon update flow — reader opt-in at scene boundary, no pending-graft conflict resolution
+- Per-session cost model — ~60% cheaper (~$0.024 vs $0.07)
+- Escalation rate — 6–10% vs v1's 15–25% (bounded task is easier)
+- Cache hit rate — 88% vs 70% (canon never mutates)
+- Prompt layering — stable-top ordering works better because layers 0–2 are truly immutable
+
+**Stays (unchanged):**
+- World Bundle format and versioning
+- Author Studio upload/validate/publish pipeline
+- Reading surface specification (typography, companion panes, input)
+- Static asset handling (SVG maps, character cards, author-authored)
+- Forbidden list (no AI image/audio/video, no chat-app gamification)
+- Text-first product identity
+- Multi-vendor LLM gateway with routing
+- Billing, auth, cross-device sync
+- Three-tier cost configuration (cloud / hybrid / self-hosted) with roughly same crossover logic
+- Holodeck framing — strengthened, not weakened
+
+**Reframed (same concept, different emphasis):**
+- Discovery is now explicitly the core reader loop; companion panes carry more of the experience than prose-pacing alone
+- The product identity moves from "living story" (v1's implicit generative premise) to "holodeck of books" (v2's explicit canonical premise)
+
+The simplification is not cosmetic. It is a real, measurable reduction in the service surface area, the correctness surface area, and the cost surface area. v2 is a smaller, sharper product. Do not smuggle back the removed machinery under a different name.
+
+---
+
+## Sources
+
+- [1] [Claude API Pricing — Anthropic](https://platform.claude.com/docs/en/about-claude/pricing)
+- [2] [Gemini Context Caching Pricing 2026](https://www.geminipricing.com/context-caching)
+- [3] [OpenAI API Pricing](https://developers.openai.com/api/docs/pricing)
+- [4] [Claude Haiku 4.5 Pricing 2026 — pricepertoken](https://pricepertoken.com/pricing-page/model/anthropic-claude-haiku-4.5)
+- [5] [DeepSeek API Pricing](https://api-docs.deepseek.com/quick_start/pricing-details-usd)
+- [6] [Gemini 2.5 Flash Pricing 2026](https://pricepertoken.com/pricing-page/model/google-gemini-2.5-flash)
+- [7] [Gemini 2.5 Pro Pricing 2026](https://pricepertoken.com/pricing-page/model/google-gemini-2.5-pro)
+- [8] [Claude 1M Context Window — Retrieval Accuracy 2026](https://claude5.com/news/context-window-race-2026-how-200k-to-1m-tokens-transform-ai)
+- [9] [GPT-4o-mini Pricing 2026 — PE Collective](https://pecollective.com/tools/gpt-4o-mini-pricing/)
+- [10] [Token Arbitrage: Groq / Fireworks / Together 2026](https://blog.gopenai.com/the-token-arbitrage-groq-vs-deepinfra-vs-cerebras-vs-fireworks-vs-hyperbolic-2025-benchmark-ccd3c2720cc8)
+- [11] [Small Language Models 2026: Phi-4, Gemma 4, Qwen 3.5](https://localaimaster.com/blog/small-language-models-guide-2026)
+- [12] [On-Device LLMs: State of the Union 2026](https://v-chandra.github.io/on-device-llms/)
+- [13] [MLX for Apple Silicon LLM Inference](https://github.com/ml-explore/mlx)
+- [14] [Qualcomm Snapdragon 8 Elite NPU LLM Performance](https://grapeup.com/blog/running-llms-on-device-with-qualcomm-snapdragon-8-elite)
+- [15] [ExecuTorch Mobile LLM Inference — PyTorch](https://pytorch.org/blog/unleashing-ai-mobile/)
+- [16] [H100 / A100 Rental Pricing 2026 — Thunder Compute](https://www.thundercompute.com/blog/nvidia-h100-pricing)
+- [17] [AI Dungeon vs NovelAI Architecture Comparison 2026](https://slashdot.org/software/comparison/AI-Dungeon-vs-NovelAI/)
+- [Anthropic Prompt Caching Guide 2026](https://markaicode.com/anthropic-prompt-caching-reduce-api-costs/)
+- [RAG Cost Breakdown 2026](https://leanopstech.com/blog/rag-vector-database-cloud-cost-optimization/)
+- [Cloudflare Workers AI Edge Inference Pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/)
+- [OpenAI Embeddings Pricing 2026](https://tokenmix.ai/blog/openai-embedding-pricing)
+- [Pinecone Serverless Pricing 2026](https://pecollective.com/tools/pinecone-pricing/)

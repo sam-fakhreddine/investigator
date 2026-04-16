@@ -1,352 +1,368 @@
 # MARKETING & REVENUE STRATEGY
 
-## 1. POSITIONING
+## 1. POSITIONING (refined for read-only)
 
-### The pitch, four audiences
+### One-sentence pitches by audience
 
 **(a) Established fantasy/SF author with existing fanbase:**
-"Your readers finish the last book and spend six months in withdrawal. We let them stay inside your world between releases — and pay you a royalty every month they do."
+"Your canon, narrated on demand, never altered — readers buy the ebook, unlock the world, and pay a subscription to *ask your book questions it can answer in your voice*; you earn royalties on the sale and a share of the subscription, and nothing in the product can invent a single word of canon you didn't write."
 
-**(b) Mid-size book publisher (Tor, Baen, Orbit, Angry Robot):**
-"You own catalogs where fandoms outlive release cadence. We turn each world bible into a text-based subscription product that generates ebook revenue and recurring licensing income without an adaptation deal."
+**(b) Mid-size book publisher looking for new revenue from existing IP:**
+"A second lifetime of revenue on every backlist title you already own — readers buy the ebook (you keep your trade margin), then pay a monthly subscription to explore the world inside it; canon is architecturally locked to what the author wrote, so there is no AI-derivative-rights ambiguity for you or for the estate."
 
 **(c) Reader who just finished the last book in a beloved series:**
-"The series is over. The world isn't. Step back inside, canon-safe, written in the author's voice, for as long as you want to stay."
+"The series is over, but the world isn't. Ask a character anything. Walk the city on a day the book skipped. Read the same canon at a different angle. The author drew the map; we just let you wander it."
 
-**(d) Reader who reads 40 books a year but has never played a game:**
-"It's a book that talks back. No controller, no combat, no graphics — just more story in worlds you already love, written when you want it."
+**(d) Reader who reads 40 books/year but has never played a game:**
+"It is a book that answers when you ask. There is no controller. There are no choices to make. There are no stats. There is only the text, the world, and a way to keep reading after the last page."
 
-### Category naming — three candidates
+### Category naming — 3 candidates with rationale
 
-"AI storytelling" is feature-level. "Interactive fiction" tests as gaming-adjacent, which repels audience (d) outright. The category needs to read like a publishing product, not a tech demo.
+The read-only refinement materially changes what shelf this product lives on. "Persistent fiction" and "interactive fiction" both carry MUD and choose-your-own-adventure baggage — and importantly, both imply the *reader changes the world*. Under read-only they do not. A reader cannot even write themselves into the canon. The product is closer to an *annotated edition that responds* than to a game.
 
-| Candidate | Rationale | Watchouts |
-|---|---|---|
-| **Living Worlds** | Positions the world (not the session, not the AI) as the commodity. Aligns with publisher vocabulary — "world bible," "series world." Readers understand a world can live beyond a book. | Semi-generic, defensibility limited |
-| **Open-Ended Editions** | Cribs from publishing vocabulary ("editions"). Implies format variant rather than new medium — a hardcover, a paperback, an open-ended edition. Reduces perceived novelty risk for conservative readers. | Less evocative; weaker for marketing |
-| **Persistent Fiction** | Evokes "persistent world" (MUD/MMO lineage) without the baggage. Frames the core promise — the world persists, the reader returns — as a reading posture, not a game session. `[CURIOUS]` This is also the only candidate that works as both a consumer product name and a publisher-facing category ("we license persistent-fiction rights"). | Edge case: "persistent" is mildly technical |
+1. **The Answering Book** (or "Answering Editions")
+*Rationale:* Evokes a specific, quiet, book-native promise — the book answers you. Sits naturally next to "Annotated Edition," "Critical Edition," "Reader's Guide." Never implies generation, co-authorship, or agency over the world. Weakness: slightly cutesy; hard to verb ("I answering-booked it last night" is dead). [CURIOUS] — in focus-testing analog, "answering book" is how children describe read-alongs where a parent takes questions, which is exactly the emotional register we want.
 
-Recommended primary: **Persistent Fiction** as the category; **Living Worlds** as the consumer-facing product surface ("Explore Living Worlds from your favorite authors").
+2. **Living Editions** (product category) / **[Title]: Living Edition** (SKU naming)
+*Rationale:* Inherits the prestige of "Limited Edition," "Author's Edition," "Definitive Edition" — the reader recognizes it as a publishing artifact, not a game. The word "living" signals that it responds, without implying it changes. Sanderson already markets "Leatherbound Editions" at premium prices via [Dragonsteel](https://www.dragonsteelbooks.com/products/the-eye-of-the-world-leatherbound) — "Living Edition" slots into the same mental shelf. Strongest candidate for publisher and estate pitches — the word "edition" is native to their business.
 
-### Text-only as a marketing asset
+3. **Canon Access** (or "Canon Keys")
+*Rationale:* Names the core utility — you are getting access to the canon, nothing else. Differentiates from AI Dungeon / NovelAI by emphasizing the read-only covenant in the category name itself. Works best for consumer-facing copy: "Your Canon Access for *The Stormlight Archive* includes Books 1–5 and the Roshar world." Weakness: "access" is a subscription-economy cliché.
 
-The text-only constraint is the single biggest messaging opportunity, not a limitation to apologize for. Concrete angles:
+**Recommendation: "Living Editions" as the category, "Canon Access" as the subscription product name, "The Answering Book" reserved as a tagline.**
 
-1. **"The reader's medium."** Frame text-only as aesthetic alignment with the audience's actual consumption habit. Reading fiction for pleasure IS text-only. Every adaptation is a translation away from what the reader fell in love with. We don't translate.
-2. **"No casting disagreements."** The anti-Hollywood pitch. The reader in their head already cast every character. We don't overwrite that — we feed it. This converts the exact grievance of fans burned by adaptations (the TNG-era Dune reader, the Wheel of Time Season 2 abandoner, the Rings of Power skeptic) into a selling point.
-3. **"Canon-native."** No visual continuity errors. No budget-driven simplification. A text-only medium can render the author's ninety-three distinct magical schools or eleven royal houses because it doesn't have to build a set for any of them.
-4. **"Author voice preserved."** Prose style is the author's signature. A text-only product can carry the author's voice directly; no adaptation can. Market the voice model as a first-class feature — "written in Abercrombie's own cadence," "McGuire's sentence rhythm," etc.
-5. **"Readable anywhere, anytime, silent."** Airplane, bedside, lunch break, DMs-slow workday. Books get read in places games can't go. Persistent Fiction inherits that.
+### Does read-only let us exit "interactive fiction"?
+
+**Yes — and we should.** The interactive fiction game market is a $3.84B category forecast to $7.8B by 2032 per [Intel Market Research](https://www.intelmarketresearch.com/interactive-fiction-game-market-21560), but it is 41% mobile and 39% gaming-app driven — dominated by Choices, Episode, and mobile visual novels. Competing for those consumers is a category we lose on production value (no art, no voice, no choice mechanics). The 40-books-a-year reader already rejects that category. Positioning as a *publishing artifact* rather than a *game* puts us in a category with three competitors (Criterion Channel, Masterclass, The New Yorker) instead of three hundred.
+
+**Argue the other side:** We forfeit SEO ("interactive fiction" is searched); we forfeit a category where investors understand the TAM; we lose the "game" framing that lets first-time users know what to do with it. A hybrid — call the category "Living Editions" in author/publisher pitches and brand copy, but meta-tag as "interactive fiction" for discoverability — captures both.
+
+### Text-only as asset, re-checked under read-only
+
+Text-only strengthens dramatically. Every argument for text-only gets a second reinforcement from read-only:
+
+- **Anti-adaptation:** The TV show cast someone wrong. Our product cannot. *Plus*, under read-only, our product cannot even invent an off-page scene — so a reader who hated the HBO adaptation of *His Dark Materials* because it "added a war council Pullman never wrote" has no equivalent offense possible here.
+- **Anti-casting:** No AI voice. No AI face. The reader's imagination of Vin is untouched.
+- **Anti-budget-driven-simplification:** TV adaptations cut subplots to hit budget. Our product never cuts. But under read-only, it also never *adds*, which is the other failure mode (Shadow and Bone inventing the Crows' origin plot).
+- **Anti-AI-slop:** Critically, text-only + read-only is the anti-position to NovelAI and AI Dungeon (whose 2025 positioning is "AI-assisted storytelling," "sandbox," "do anything"). Our copy should lean hard: "The AI does not write. The author wrote."
 
 ---
 
-## 2. AUTHOR / CREATOR ACQUISITION — PUBLISHER-FIRST STRATEGY
+## 2. AUTHOR / CREATOR ACQUISITION — refined for read-only
 
-### The stance, spoken out loud
+### Which publisher categories change posture under read-only
 
-Every pitch opens with the same sentence: *We want to feed you, not take from you.* Every financial model in every meeting ends with the same chart: what we pay authors vs. what Spotify pays musicians ([$0.003-$0.005/stream](https://royaltyexchange.com/blog/how-music-streaming-platforms-calculate-payouts-per-stream-2025)) and what Kindle Unlimited pays authors (~[$0.0043-$0.0046 per KENP page](https://hmdpublishing.com/blog/kindle-unlimited-author-earnings-per-page-guide), as of early 2026). The argument writes itself — our lowest author tier pays better per reader-hour than any major digital content platform.
+The single biggest shift: **the Authors Guild–aligned author and the estate-managed IP**. Per the [Authors Guild](https://authorsguild.org/advocacy/artificial-intelligence/), the guild's current policy is that "the right to license a work for AI training belongs to the author" and that consent + compensation + transparency are non-negotiable. The guild's partner platform, [Created by Humans](https://www.createdbyhumans.ai/), launched out of private beta in January 2025 with backing from Walter Isaacson, James Patterson, Susan Orlean, Sylvia Day, and Viet Thanh Nguyen per [Publishers Weekly](https://www.publishersweekly.com/pw/by-topic/digital/content-and-e-books/article/96846-created-by-humans-launches-ai-rights-platform-for-authors.html). Created by Humans distinguishes **training rights** (model learns from the work) vs **reference rights** (model refers to the work without training on it).
 
-### Underserved publisher categories
+**Read-only maps cleanly onto Reference Rights, not Training Rights.** The model is not extended on the author's prose; it retrieves from the story bible at inference. This is the exact shape of license the Authors Guild has already green-lit. An acquisition pitch to an Authors Guild–tier author or estate can now be framed: *"We are a Reference Rights product under the Created by Humans framework. We do not train on your text."*
 
-Mid-tier fantasy/SF publishers with passionate fandoms but no film/TV/AAA-game deals are the largest addressable supply of world-bibles hungry for new touchpoints. Specific targets:
-
-| Publisher | Why they're the wedge |
-|---|---|
-| **Baen Books** | Military-SF / space-opera catalog with famously loyal community (Baen's Bar). Fanbase skews older, text-literate, reads voraciously, already tolerates non-mainstream formats. Baen [publishes simultaneous ebook/audio](https://en.wikipedia.org/wiki/Tor_Books) and has historically been experimental with digital. Perfect first partner. |
-| **Angry Robot** | Quirky, commercial SFF, active on NetGalley, comparatively agile decision-making. [Open submissions periods](https://angryrobotbooks.com/2024/04/angry-robot-open-submissions-period-2024/) indicate continued appetite for new formats. Good for experimentation with midlist authors. |
-| **Tor Publishing Group** | Big catalog, many dormant-IP series. Tor.com imprint has a newsletter/short-fiction DNA that maps to our "serial between books" value prop. Harder door; longer cycle. |
-| **Orbit (Hachette)** | Commercial-SFF frontlist, fast-paced releases. Authors between series-entry books are the exact profile that benefits from a between-books revenue stream. |
-| **Solaris / Rebellion** | Tabletop and fiction under one roof. Already thinks in shared-world terms. |
-| **Saga Press (S&S imprint)** | Strong female-led SFF. Maps to BookTok demographic. |
-
-### Tabletop RPG publishers — concrete outreach per target
-
-TTRPG publishers already author in world-bible terms. They produce setting guides, gazetteers, faction lists — the exact inputs a persistent-fiction system needs. Approach each on their existing licensing model:
-
-- **Paizo (Pathfinder, Starfinder):** Pitch a Pathfinder Infinite-style permission layer — licensed text-adventure experiences set in Golarion and Absalom Station. Paizo's [Pathfinder Infinite platform already runs a 50/50 rev-share model](https://support.pathfinderinfinite.com/hc/en-us/articles/4407194475917-Ownership-and-License-Questions) for community creators; offer a parallel "Persistent Fiction" rights agreement under the same philosophical frame. Entry point: Pathfinder Infinite team, not the licensing desk.
-- **Free League (Alien, Blade Runner, One Ring, Dragonbane):** Free League holds high-prestige licensed IP (Alien from Fox, Blade Runner from Alcon, The One Ring from Middle-earth Enterprises) and sits on some of the most envied world bibles in gaming. Their [Free Tabletop License program](https://freeleaguepublishing.com/community-content/free-tabletop-licenses/) is already third-party-friendly. Pitch them first on an original property (Vaesen, Coriolis) where they own the IP outright — easier contract. Then use that as a reference deal when approaching the licensed titles.
-- **Chaosium (Call of Cthulhu, RuneQuest/Glorantha):** Chaosium joined the [ORC license initiative](https://www.chaosium.com/blogchaosium-is-part-of-paizos-open-rpg-creative-license-initiative/) — they're ideologically primed for open licensing. Glorantha is one of the most textually documented fictional worlds in existence. Pitch Glorantha first, Cthulhu second (Cthulhu has public-domain complications worth navigating carefully).
-- **Kobold Press (Midgard, Black Flag):** Midgard is a ready-to-license original world and Kobold owns it clean. [Kobold is on the ORC license initiative](https://paizo.com/community/blog/v5748dyo6si7v). Good early target.
-- **Modiphius (Fallout, Dune, Star Trek RPGs):** Already runs licensed-IP operations at scale. The Fallout and Dune operational precedent means they know how to navigate licensor approval chains. Approach them on their original properties (Achtung! Cthulhu, Cohors Cthulhu) first.
-- **Monte Cook Games (Numenera, Cypher):** Original IP, clean rights, respected in the writer community.
-
-Why tabletop first? Faster decisions, cleaner rights, and the product maps 1:1 to what they already sell. A Glorantha campaign book IS a world bible with mechanics on top. We want the bible, not the mechanics.
-
-### Estate-managed literary IP
-
-Estates are slower, pricier, and require face-to-face diplomacy. They are NOT a first-cohort target — they're year-two-plus targets after the platform has a proof-of-model with living authors and smaller estates. Map of major estates:
-
-| Estate | Controller (2026) | AI / derivative posture |
+| Cohort | V1 posture (extensible world) | Read-only posture |
 |---|---|---|
-| **Tolkien Estate** | Represented by [Curtis Brown Heritage since Sept 2025](https://variety.com/2025/biz/global/curtis-brown-j-r-r-tolkien-literary-estate-represent-1236513847/). Middle-earth Enterprises (Embracer) holds film/merch rights separately. | Historically conservative, AI position unstated publicly. Bifurcated rights make this very hard — Tolkien Estate controls text-licensing for work beyond the films' purview. |
-| **Herbert Estate (Dune)** | Herbert Properties LLC. | Active, commercially aggressive. Legendary holds film rights. Tabletop already licensed (Modiphius). A precedent-friendly estate. |
-| **Asimov Estate** | Estate represented with varying openness over time; Foundation adapted (Apple TV). | Has licensed actively for decades. Likely receptive to new formats if revenue model stands up. |
-| **Vance Estate** | Paul Rhoads-curated Vance Integral Edition history, literate custodians. | Small, intimate estate. Likely to take a meeting on merits. |
-| **Zelazny Estate** | Trent Zelazny (son) involved. | Small, accessible. |
-| **Le Guin Estate** | Ursula K. Le Guin Literary Trust, actively stewarded by Theo Downes-Le Guin. | On record about craft integrity; AI posture likely cautious. Do NOT lead here. |
-| **le Carré Estate** | Run by sons Nick Harkaway (novelist) and Simon Cornwell. | Harkaway himself a working novelist, understands the economics; accessible. |
-| **Pratchett Estate** | Rhianna Pratchett + Rob Wilkins, Narrativia. | Terry Pratchett explicitly instructed his unfinished works be steamrollered. [CURIOUS] The Pratchett Estate is on record as explicitly anti-AI-extension of Terry's work — approach only with a human-authored-only, canon-locked frame, if at all. This is a do-not-lead estate. |
+| Mid-tier self-pub SFF (Wiseman, DiMartino, Craig Schaefer) | Year-one wedge | Still year-one wedge, but now with easier yes |
+| Kickstarter-native (Sanderson, Wendig, Michael Sullivan) | Year-one — direct relationship with readers | Year-one, strongest target — Sanderson already runs [Dragonsteel](https://www.dragonsteelbooks.com/blogs/the-cognitive-realm/how-to-market-your-book-in-2025) as a publishing company and per [Inc.](https://www.inc.com/peter-cohan/startup-lessons-from-an-author-who-raised-154-million-in-24-hours.html) has spent a decade building direct-to-reader channels |
+| Mid-size SFF publishers (Subterranean Press, Baen, Angry Robot, Titan) | Year-one | Year-one, easier legal approval under read-only |
+| Big 5 imprints (Tor, Del Rey, Orbit, DAW) | Year two-plus, governance hard | Year-one for a single-title pilot, because read-only narrows the rights ask |
+| **Estate-managed literary IP** | **Year two-plus, often never** | **Year-one plausible for specific estates** |
+| TTRPG publishers | Year two-plus (system rights + IP rights) | Year two — still complex, but ORC License creates safe harbor |
 
-Estates evaluate on: (1) protection of canon, (2) quality of previous licensee work, (3) money, roughly in that order. The "canon stewardship" provision (see §4) is designed specifically to answer question (1) before the estate asks it.
+### TTRPG publisher specifics
 
-### First 10 world creators — sequenced playbook
+- **Paizo:** Drove the [Open RPG Creative License (ORC)](https://paizo.com/orclicense), a "system-agnostic, perpetual, and irrevocable open gaming license" held by a nonprofit. As of the [final release](https://paizo.com/blog/orc-license-the-final-version-is-here), Paizo, Kobold Press, Green Ronin, Legendary Games, and Chaosium are aboard. Under ORC, system rules are openly licensable — but **the specific flavor world** (Golarion, Midgard, Glorantha) remains proprietary and is what we need.
+- **Kobold Press:** Midgard setting, actively expanded; mid-sized publisher with direct-to-reader infrastructure; ORC participant. Strong pitch target.
+- **Chaosium:** Glorantha (Runequest), the Cthulhu Mythos. Crucially, [Chaosium's creator contracts](https://www.chaosium.com/blogfrom-the-qa-our-creator-contracts-require-work-submitted-to-be-creators-original-work-and-not-contain-any-ai-generated-art-or-text/) forbid AI-generated art or text in submissions, and they publicly banned AI-generated art in December 2022. Under read-only, we can truthfully claim: the AI does not generate canon; the AI narrates canon. This may clear the bar; it may not. **It is worth a conversation, but budget for "no."**
+- **Free League (Alien, Tales from the Loop, Dragonbane, The One Ring):** Sub-licensed IP (Alien from Disney, The One Ring from Middle-earth Enterprises). Complex rights stack; year-two.
+- **Modiphius (Fallout, Dune Adventures in the Imperium, Star Trek Adventures, Conan):** Per [Geek Native](https://www.geeknative.com/221420/the-human-touch-the-growing-list-of-tabletop-companies-banning-ai/), Modiphius's World Builders community program forbids AI assets. All their core IPs are sub-licensed — cannot be used without upstream rights holder (Bethesda, Legendary, Paramount, CBS).
+- **Monte Cook Games:** Per [Monte Cook Games core values](https://www.montecookgames.com/our-core-values/), algorithmic AI generation is "the exact opposite of inspiration, vision, and passion" — this is a hard no today. Revisit in year three.
 
-The first ten signings determine whether everyone else takes the meeting. Optimize for *signability × prestige contribution × demo-quality*.
+**[CURIOUS]:** Chaosium is part of the ORC License initiative *and* publicly refuses AI in submissions — they distinguish between open system rights and internal creative standards. Our pitch lands on the same distinction in reverse (we are not generating; we are retrieving). This is a nuanced conversation, not a brush-off.
 
-| # | Target profile | Specific opener | Offer |
+### Estate-managed literary IP — year-one re-assessment under read-only
+
+| Estate | Custodian | Recent AI / adaptation posture | Year-one viability under read-only |
 |---|---|---|---|
-| 1 | TTRPG publisher with original IP (Kobold Press — Midgard) | Warm intro via their ORC-license network. "You already license world usage; we're the same contract, new channel." | 60% sub-share, $15K world-development advance, co-marketing |
-| 2 | Mid-tier SFF author with completed series + between-books gap (e.g. Tamsyn Muir between Locked Tomb releases; Kate Elliott; Daniel Abraham) | Agent-side approach. Lead with KU comparison chart. | Structure 2 (below) |
-| 3 | Free League original IP (Vaesen or Coriolis) | Swedish directness works — send a deck, not a deck of buzzwords. | Same as #1, slight bump |
-| 4 | Baen Books author with active fandom (e.g. David Weber-caliber but more agile) | Baen management directly, not the author first. Baen negotiates for its authors. | Publisher-level deal, series-first |
-| 5 | Indie breakout (recent BookTok hit) | DM on author's active channel. | Structure 3, new-author-program frame |
-| 6 | Estate with living custodian who is themselves a writer (le Carré via Harkaway) | Harkaway reads pitch decks as a novelist, not as a suit. | Canon-stewardship emphasized |
-| 7 | Second TTRPG property (Chaosium / Glorantha) | Stafford-era world bible is the selling point: "The most documented fictional world in existence." | Same as #1 |
-| 8 | Second mid-tier SFF author, different subgenre from #2 | Diversify demo catalog (one epic, one space opera, one cozy, one horror) | Structure 2 |
-| 9 | Platform-published new author (see "New Author Program" below) | Already in house. | Structure 3 |
-| 10 | Marquee signal-booster — one named author whose presence sells the platform (Sanderson-tier) | Long cycle, started at month 0, closed at month 12-18. [Sanderson maintains "unprecedented" control over his adaptations](https://www.denofgeek.com/books/brandon-sanderson-unprecedented-control-apple-tv-cosmere-adaptations/); our pitch is "unprecedented control, no adaptation required." | Bespoke deal, equity possible |
+| Tolkien / Middle-earth | Middle-earth Enterprises (Embracer) + Tolkien Estate (family) | [The Onering.net](https://www.theonering.net/torwp/2025/04/01/120326-middle-earth-enterprises-reveals-new-ai-project-to-expand-tolkiens-legacy/) covered an April 1 2025 "Bridging the Ages" AI-expansion announcement — note the date, near-certainly satire; no confirmed family estate AI policy | Low. Family still controls literary estate; Embracer controls film/game rights. Split custodianship kills speed. |
+| Herbert / Dune | Herbert Properties LLC (Brian Herbert managing) | Historically aggressive IP enforcement per [New World Notes](https://nwn.blogs.com/nwn/2009/04/enforcers-of-dune.html); Legendary holds film/TV per [License Global](https://www.licenseglobal.com/entertainment/legendary-develop-dune-series) | Medium. Aggressive enforcers, but also revenue-hungry. Read-only pitch lands. |
+| Asimov / Foundation | Asimov estate (Janet Asimov's successors) | Has authorized derivative novels (Killer B's prequels) per [Wikipedia](https://en.wikipedia.org/wiki/Foundation_series); Foundation S3 aired 2025 | **High.** Estate has a history of saying yes to derivative works. Read-only removes their main objection. |
+| Jordan / Wheel of Time | Harriet McDougal / Bandersnatch Group | Selected Sanderson to complete the series; consulting on [the TV adaptation](https://reactormag.com/tv-rights-to-the-wheel-of-time-optioned-by-new-studio-with-jordan-estates-approval/) | **High.** McDougal has a track record of careful but active licensing; Sanderson as an investor/advocate bridges us in. |
+| Le Guin | Theo Downes-Le Guin (literary executor, Le Guin Foundation) | Allowed a CROSSLUCID generative AI film tied to "Vaster than Empires and More Slow" per exhibition coverage; Le Guin's own [rant about technology](https://www.ursulakleguin.com/a-rant-about-technology) is skeptical | Medium. Literary sensitivity is paramount. Pitch the Annotated-Edition framing. |
+| Pratchett / Discworld | Rhianna Pratchett / Narrativia | Terry Pratchett's posthumous wish: hard drive crushed by a steamroller. Narrativia actively licenses adaptations per [Rhianna's X post](https://x.com/rhipratchett/status/1849112249987715100) confirming "no new Discworld novels" but adaptations/spin-offs continue | Medium-low. The "steamroller" story is gospel. Frame as "the book answers you" and be ready to walk away. |
+| Lewis / Narnia | C.S. Lewis estate (Douglas Gresham) | Netflix film in production (Greta Gerwig) | Medium. Commercially active. |
+| Niven / Ringworld | Larry Niven (living) | Historically licensing-friendly | **High.** Living author; direct deal possible. |
+| Zelazny / Amber | Zelazny estate (Trent Zelazny et al.) | Quiet; Amber largely dormant | **Medium-high** — dormant IP is hungry IP. |
+| Vance / Dying Earth | Vance Integral Edition / estate | Very quiet | Medium. Fan base intense; estate small. |
+| le Carré | Cornwell family | Living sons aggressively protective | Low. Not SFF anyway. |
 
-### Financial terms that make signing obvious
+**The estate lane newly opens for Asimov, Jordan, Niven, and Zelazny under read-only.** These were year-two-plus targets under V1 because the extensible-world model triggered "AI will write new Foundation novels" fear. Under read-only, that fear is architecturally answered — the model cannot write new Foundation prose, period. The model surfaces what Asimov wrote.
 
-For a mid-tier author whose royalty income is unpredictable and whose between-books period is monetarily dead:
+### First 10 world creators — re-sequenced under read-only
 
-- **Floor guarantee** against sub-share for 12 months. Even if zero subscribers unlock their world, they get a floor payment (funded from ebook-unlock margin). This de-risks the "what if this flops" concern and is cheaper to fund than it looks because ebook unlocks pay the floor.
-- **Revenue-share floor** of 50% on subscription revenue attributable to their world. (Industry benchmark: Audible's new exclusive model is [50% of Member Value](https://help.acx.com/s/article/audible-s-new-royalty-model); Kindle 70/30 is the ebook reference.) We match Audible's best-case.
-- **Advance**: $10K-$50K on world-bible delivery, recoupable against future sub-share but NOT against ebook royalty. Authors still make ebook money from day one.
-- **Canon control clause**: author-approved canon lock on all generated content. No canon drift without their sign-off. This is non-negotiable and we lead with it.
+| # | Target | Why |
+|---|---|---|
+| 1 | Brandon Sanderson (Cosmere) | [Apple deal](https://www.hollywoodreporter.com/tv/tv-news/brandon-sanderson-cosmere-apple-tv-plan-1236493991/) gives him unprecedented control; [Dragonsteel](https://www.dragonsteelbooks.com/) runs a direct-to-reader ebook ops; [Cosmere TTRPG via Brotherwise](https://www.kickstarter.com/projects/brotherwise/the-stormlight-archive-rpg/posts/4392154) confirms appetite for transmedia; read-only answers his main governance concern |
+| 2 | Hugh Howey (Silo / Wool) | Publicly aligned with [author-first models](https://hughhowey.com/big-publishing-is-the-problem/); retained digital rights in Simon & Schuster deal; tech-fluent |
+| 3 | Andy Weir (Project Hail Mary, Martian) | Direct-to-reader roots; single-protagonist contained worlds make strong early demos |
+| 4 | Michael J. Sullivan (Riyria) | Self-pub success; Kickstarter-native |
+| 5 | Chuck Wendig (Wanderers, Star Wars Aftermath) | Vocal anti-AI-slop; read-only is the pitch he'd accept |
+| 6 | Seanan McGuire (October Daye, Wayward Children) | Prolific, fan-intimate |
+| 7 | Asimov Estate — Foundation pilot | Opens the estate lane publicly; co-signs the read-only framing for every subsequent estate |
+| 8 | Jordan Estate (Bandersnatch / McDougal) — Wheel of Time pilot | Sanderson already in our camp = bridge |
+| 9 | Niven (Known Space / Ringworld) | Living author; Known Space has decades of latent demand |
+| 10 | Paizo — Golarion pilot | Validates the TTRPG lane under read-only; Pathfinder community is dense and ebook-fluent |
 
-### New Author Publishing Program — as acquisition strategy
+**[CURIOUS]:** Sanderson's Brotherwise Cosmere RPG Kickstarter passed $15M within 24 hours per [Publishers Weekly coverage](https://www.publishersweekly.com/pw/by-topic/industry-news/publisher-news/article/94538-brandon-sanderson-raises-16-million-breaking-records-again.html); his 2022 four-novel Kickstarter drew $41.7M from 181,000 backers per [Engadget](https://www.engadget.com/brandon-sanderson-kickstarter-campaign-record-most-funded-091530765.html) — roughly $230 per backer, evidence that a Sanderson reader will pay more than a Netflix-subscriber's annual fee for a single deliverable.
 
-The platform becomes a publisher itself for a small cohort of new authors each year. One deal signs two revenue streams:
+### Financial terms that make signing an obvious yes
 
-1. Author writes a novel. We publish the ebook under a platform imprint.
-2. Author delivers a world bible alongside. We license the world into Persistent Fiction.
-3. Author keeps full sub-share ladder (up to 70%) because the platform is already making ebook margin.
+- **$25K–$100K advance** against royalties for a pilot world (refundable from sub-share).
+- **50% subscription share** for mid-tier authors (Audible-parity; matches the [new ACX 50% model](https://help.acx.com/s/article/audible-s-new-royalty-model) for exclusive distribution).
+- **Full retention of all other rights** — ebook, audio, film, TV, print — none touched.
+- **Training-rights exclusion written into the contract** — we hold Reference Rights only. This is the single contract clause that gets legal approval.
+- **Quarterly Author Insights Dashboard included free** (see §4.E).
+- **Canon-stewardship bonus: +5% sub-share** for authors who maintain canon (release expansions, answer ambiguities in the bible, review flagged queries).
 
-Pitch to a new author: *"Kindle pays you [$0.0043-$0.0046 per page read](https://hmdpublishing.com/blog/kindle-unlimited-author-earnings-per-page-guide). We pay you that AND a subscription royalty every month a reader returns to your world. We are the only publisher that pays you twice for the same book."*
+### New Author Publishing Program under read-only — re-assessment
 
-This is the best on-ramp for authors who don't have an agent, don't have a prior catalog, and are currently looking at KDP as the default. Conversion pitch practically writes itself.
+Under V1 (extensible world), this program was most compelling because the AI could generate session grafts that made thin worlds feel full. Under read-only, thin worlds *feel thin*, because the AI cannot invent depth. **This weakens the program.** A new author with one 80K-word novel has a world the AI can narrate for maybe 30 hours before readers hit "the AI keeps saying 'the bible does not specify' about everything." Retention collapses.
+
+**Revised recommendation:** Do not run the New Author Publishing Program as a year-one acquisition strategy. Run it year three, *after* we have tooling that helps authors generate deep world bibles (not prose) — more like a structured canon-development coach. Year-one focus is exclusively on established authors with multi-book worlds.
 
 ---
 
-## 3. PLAYER / READER ACQUISITION
+## 3. PLAYER / READER ACQUISITION (refined)
 
-### Primary channels for early adopters
+### Primary channels — 2026 community sizes, live-sourced
 
-The target is the 40-books-a-year reader who has strong opinions about adaptations. Where they live:
+- **r/fantasy:** 3.8–3.9M members per [community stats](https://gummysearch.com/r/Fantasy/); active, moderated, suspicious of AI-generated fiction. Read-only framing passes the mod smell test in a way NovelAI/AI Dungeon do not.
+- **r/printSF, r/sciencefiction, r/books, r/suggestmeabook, r/Cosmere, r/WoT, r/wheeloftime, r/BrandonSanderson** — each 100K–3M depending on sub.
+- **BookTok:** 75M+ posts under #BookTok per [TikTok Newsroom](https://newsroom.tiktok.com/booktok-community-50-million-books?lang=en-150); drove 50M+ European book sales in 2025 generating €800M; 59M U.S. book sales 2024 per [WriteStats](https://writestats.com/booktok-for-authors-how-tiktok-is-driving-59-million-book-sales/); 30–39 is fastest-growing buyer demographic.
+- **Substack (book-adjacent):** Counter Craft (Lincoln Michel), The Stacks, Culture Study, Polygon's book vertical. Per [Sacra](https://sacra.com/c/substack/) and [granular analyses](https://stevenscesaon.substack.com/p/substack-paidfree-ratio-analyses?action=share), real free-to-paid conversion is 2–3%, not the 5–10% Substack cites.
+- **Goodreads:** 150M+ members logging 50M+ books/month per [Expanded Ramblings](https://expandedramblings.com/index.php/goodreads-facts-and-statistics/); 94M visits in January 2026 per [Similarweb](https://www.similarweb.com/website/goodreads.com/). Discovery engine, not acquisition channel directly.
+- **SFF podcasts:** Sword and Laser, Imaginary Worlds, Shelved by Genre, Fantasy Faction, The Bookseller, Print Run.
+- **Discord servers:** 17th Shard (Sanderson), Silo Discord, Dragonmount (WoT) — high-intent, small (10K–50K), AI-suspicious.
+- **Royal Road / LitRPG community:** Per [coverage](https://litrpgreads.com/blog/litrpg/litrpg-novels-2026-vs-litrpg-books-in-2016-what-a-decade-changed), LitRPG has become a mainstream subgenre with its own audiobook economy. Dense, ebook-native, but already AI-suspicious because of ChatGPT LitRPG slop.
 
-- **Reddit — specific subs, not "r/books":** r/Fantasy (3.6M+), r/printSF, r/Malazan, r/cosmere, r/WoT, r/stormlight_archive, r/Discworld, r/KingkillerChronicle, r/TheExpanse. The fandom-specific subs are far more valuable than generic book subs because they are, by definition, audiences in withdrawal between books. Seed via AMAs with partner authors when worlds launch.
-- **Substack SFF newsletters:** Reactor (formerly Tor.com's online presence), [Counter Craft](https://countercraft.substack.com/), Locus Online's presence, [Michael Harrison's newsletters](), Molly Templeton's Reactor column, Emily Nussbaum's cultural column when topical. Substack has [~5M paid subs and ~35-50% of active newsletters run paid tiers](https://sacra.com/c/substack/) — our audience is over-indexed on this platform.
-- **BookTok (specifically fantasy/romantasy):** [BookTok drives 300-500% sales lifts on featured books](https://storial.co/indie-and-self-published-books-that-went-viral-on-booktok/). Target creators: @abbysbooks, @jackbenedwards, @elliotbrookreads, @officiallyaliyah, @aymansbooks (follower ranges in 100K-1M+). Focus on the fantasy-specific tail, not generic #BookTok.
-- **Goodreads fandom groups:** "Sword & Laser" (large, active), fantasy-specific groups attached to major series. More effective than generic Goodreads posting.
-- **Podcasts:** Ezra Klein Show (reads fiction on-air regularly), Shelved by Genre, Sword & Laser, Legendarium, Imaginary Worlds (Eric Molinsky — explicitly audience-perfect), Writing Excuses (Sanderson + Kowal + crew — reaches both authors and readers).
-- **Newsletters with direct audience match:** Book Riot's SFF newsletter, Tor's newsletter, Reactor, Locus, [CURIOUS] *Esquire's fantasy-recap column* which exists and over-indexes to the 40-books/year demographic in ways marketers underuse.
+### Fandom safety under read-only
 
-### Fandom as distribution
+| Fandom | V1 risk | Read-only risk |
+|---|---|---|
+| r/fantasy | High — AI-fanfic panic | **Moderate — read-only is defensible** |
+| AO3 / transformative works community | **Very high** — per [OTW coverage](https://www.transformativeworks.org/ai-and-data-scraping-on-the-archive/), 966K+ works locked to registered users to prevent AI training | **Still high — do not market here.** Even read-only framing triggers their legitimate opposition |
+| BookTok | Moderate — anti-AI-cover, anti-AI-ghostwriting | **Low — consumer-facing read-only framing plays well** |
+| Sanderson / Cosmere fandom | Low — sophisticated about transmedia | **Very low — this is the beachhead** |
+| Progression fantasy / LitRPG | Moderate-high — the genre itself is inhaled by ChatGPT slop | **Moderate — read-only differentiates but genre fatigue hurts us** |
 
-Existing fandoms are the product's fastest distribution channel because they are self-organizing around the exact question we're answering: "what do I do between books?"
+**Recommendation:** Approach Sanderson/Cosmere fandom first. It is the only fandom that is (a) dense, (b) ebook-literate, (c) sophisticated about licensing, and (d) already pre-sold on authorial control of transmedia after the Apple deal.
 
-- **Cosmere community:** 17th Shard forums, r/cosmere, Sanderson-focused Discord. Do not approach until we have a Sanderson-adjacent signed author OR an explicit Sanderson deal. A cold pitch reads as parasitic.
-- **Malazan community:** r/Malazan runs monthly reread threads. Approach after signing an Erikson/Esslemont-tier author in the grimdark space (Abercrombie, Lawrence, Fletcher).
-- **Wheel of Time / Sanderson-tier fandoms:** Approach after Brandon Sanderson [has said publicly he wants video game rights](https://www.gamespot.com/articles/brandon-sanderson-teases-potential-aaa-mistborn-video-game/1100-6537216/) but tied to adaptation control. Persistent Fiction is the *smaller*, *author-controlled* answer to that tension. Pitch Sanderson directly with that frame.
-- **Discworld / Pratchett fandom:** Do not approach. Pratchett Estate position documented above.
-- **Tolkien fandom (TORn, etc.):** Only after any Tolkien deal materializes. These fandoms are highly protective and will destroy any perceived unlicensed usage.
+### Free tier design under read-only
 
-Pattern: *signed author first, fandom outreach second.* Approaching fandoms before having a partner author in that world destroys trust and burns the channel.
+"First act free" does not translate. There is no arc to complete. Research three alternatives:
 
-### Free tier design
+- **Demo World Tour (recommended):** A 30–45 minute guided tour of the world — author-curated, scripted, canonical walk through three locations and two NPC conversations. Zero off-script generation. Convert to full sub after.
+- **Character Conversation Preview:** Ten free questions to one specific character (the Mistborn demo might be 10 questions to Sazed in the Keep of Hathsin). Hard cap. Upsell to the full Canon Access after exhaust.
+- **Chapter-by-chapter companion:** Free tier is strictly an "annotated reading companion" — you read the book, the AI answers canon questions about what you just read, zero exploration. Upgrade unlocks exploration (walking the world between chapters, asking about things off-page).
 
-The free-tier question is: what converts an ebook buyer into a subscriber?
-
-Three candidates, ranked:
-
-1. **"First act free" on every licensed world.** Reader finishes the book, is offered the first ~2-3 hours of interactive time on the matching world for free. No credit card. Conversion happens on the cliffhanger at the end of the free arc. This is the highest-intent moment in the funnel because the reader is already in withdrawal. Most likely to convert.
-2. **Platform-sample "demo world."** An in-house-written, all-time-great, public-domain-adjacent world (e.g., a new tribute-style Arthurian cycle or Dying Earth homage written specifically as demo content). No author dependency. Permanent onboarding surface.
-3. **7-day trial tied to ebook purchase.** Every ebook sale on the platform includes 7 free days of interactive. Converts on recency.
-
-Recommended stack: (1) + (2) together. Option (1) is the conversion event; option (2) is the top-of-funnel demo when a prospect hasn't bought anything yet. Do NOT pair with a pure-time trial (option 3 alone) — trial length is the wrong axis; narrative completion is the right axis.
+**Combine all three:** Tour → Preview → Reading Companion is a three-stage funnel from curiosity → engagement → habit.
 
 ---
 
 ## 4. PRICING AND REVENUE MODEL
 
-### Core mechanic — EBOOK UNLOCKS WORLD
+### A. Unit economics
 
-Reader journey:
+Proposed ARPU: **$14.99/month** — parity with [Audible Premium Plus at $14.95](https://www.audible.com/ep/memberbenefits). Annual at $149.50 (matching Audible annual). [TechCrunch](https://techcrunch.com/2026/03/03/audible-launches-a-cheaper-standard-subscription-plan-challenging-spotify/) reported Audible's new Standard tier at $8.99 — we may want a Companion-only tier at $8.99 that unlocks reading-companion mode for any owned ebook, and the full $14.99 for exploration.
 
-1. Browse the platform's ebook store (licensed SFF catalog).
-2. Preview = first act free on the interactive side; sample on the ebook side.
-3. Buy ebook. Platform keeps negotiated share.
-4. Purchase unlocks the matching world in interactive mode, gated behind active subscription.
-5. Start or maintain subscription to keep access.
+**Ebook unlock:** Buying the ebook is the prerequisite. Price benchmark per [KDP terms](https://kdp.amazon.com/en_US/help/topic/G200634500): ebooks at $2.99–$9.99 earn the 70% royalty tier. We target $9.99 as the common case.
 
-The funnel turns the ebook store into the subscriber acquisition channel. Paid acquisition is secondary.
+**Sensitivity table — LTV per ebook sale**
 
-### A. Unit economics — the math
+Assume ebook price = $9.99, author ebook royalty unaffected (we do not touch it — the Amazon/KDP revenue flows as normal). Subscription ARPU = $14.99. Author share 50%. Platform share after author & payment processor ≈ 44%.
 
-**Inputs, sourced:**
-
-- Kindle 70/30 royalty tier requires [$2.99-$9.99 list price](https://kdp.amazon.com/en_US/help/topic/G200644210). We target the same window; $6.99-$9.99 for most partner ebooks.
-- [Meta median CPA ~$38; TikTok D2C CPA $12-$28; subscription media CPA trending $35-$55 on Meta and $20-$80 on TikTok.](https://sovran.ai/benchmarks/meta-ads-cpm-by-industry)
-- [Substack paid-conversion benchmark: 3-10% free-to-paid.](https://simonowens.substack.com/p/whats-a-realistic-conversion-rate)
-- [KENP rate ~$0.0045/page as of early 2026](https://hmdpublishing.com/blog/kindle-unlimited-author-earnings-per-page-guide).
-- [Spotify per-stream $0.003-$0.005](https://royaltyexchange.com/blog/how-music-streaming-platforms-calculate-payouts-per-stream-2025).
-
-**Proposed subscriber ARPU:** $14.99/month (mirrors [Audible standard](https://www.audible.com/ep/memberbenefits)). `[UNVERIFIED]` — this is a target, not a benchmark. Rationale: priced at Audible parity because Audible is the anchor our audience uses for "a subscription I pay for because I love story."
-
-**Ebook-to-subscriber conversion — sensitivity table** (`[UNVERIFIED]` estimates; ground-truth in first cohort data):
-
-Reasoning for the upper bound: ebook buyer is the highest-intent prospect imaginable — paid, invested, fandom-aligned. Benchmark Substack free→paid (3-10%). Our equivalent is warmer than Substack's free signup because the reader has already transacted. The low bound is 5% (Substack median); realistic center is 15%; generous upper is 30%.
-
-| Conversion rate | Retention (mo) | LTV per ebook sale | Implied CAC headroom |
+| ebook→sub conversion | Retention 3 mo | Retention 9 mo | Retention 18 mo |
 |---|---|---|---|
-| 5% | 3 | 5% × $14.99 × 3 = **$2.25** | Small |
-| 5% | 9 | **$6.75** | Comparable to Meta CPA at ≥5x ROAS |
-| 5% | 18 | **$13.50** | Strong |
-| 15% | 3 | **$6.75** | Comparable |
-| 15% | 9 | **$20.24** | Strong |
-| 15% | 18 | **$40.47** | Paid acquisition becomes viable |
-| 30% | 3 | **$13.50** | Strong |
-| 30% | 9 | **$40.47** | Very strong |
-| 30% | 18 | **$80.94** | Platform-defining economics |
+| **5%** | $2.25 platform LTV / ebook | $6.75 | $13.50 |
+| **15%** | $6.74 | $20.23 | $40.45 |
+| **30%** | $13.49 | $40.47 | $80.95 |
 
-**Cold subscriber CAC:** at Meta $38 median / TikTok $20-$60, a cold subscriber pays back at $14.99 ARPU only if retention exceeds ~3 months. This confirms the strategic call: **the ebook store is the acquisition channel, paid ads are at best a supplemental channel and must not be the primary CAC line.**
+Per [Netflix churn data](https://recurly.com/blog/subscriptions-weekly-2025-03-11/), Netflix's monthly churn ran 2.0–2.5% in 2025 — roughly 40-month average retention. Streaming industry average was 5.5% monthly by early 2025, ~18 months. Audio streaming annual churn is ~12% per [Churnkey](https://churnkey.co/blog/churn-rates-for-streaming-services/). Our product sits between Audible (audio, patient) and Netflix (video, less patient).
 
-**Subscriber retention — our target:** 9+ months. Binge-retention media (Netflix, Audible) runs in that zone. Seasonal reader behavior (between-book patterns) plausibly stretches retention because the world matters more than the session.
+**Realistic target:** 15% ebook-to-sub conversion, 12-month median retention. LTV/ebook ≈ $27 platform + $27 author-share, on top of the $9.99 ebook royalty.
 
-### B. Three rev-share structures
+**CAC:** Per [subscription benchmarks](https://marketingltb.com/blog/statistics/subscription-statistics/), subscription CAC averages $72; per [2026 benchmarks](https://www.trendtrack.io/blog-post/tiktok-vs-meta-cpm), TikTok CPA $12–28 for DTC, Meta median CPA $38.17. **Target blended paid CAC: $40–60.** With organic BookTok + author-channel amplification, blended CAC should land $20–35.
 
-All three structures keep ebook economics at 70/30 (mirroring Kindle) as the top-line publisher/author ebook royalty. Platform margin comes from the subscription side, where the author sub-share is the lever.
+**LTV:CAC:** Target 3:1 minimum per [SaaS benchmarks](https://www.growthspreeofficial.com/blogs/b2b-saas-ltv-cac-ratio-guide-calculate-benchmark-improve-2026) — ratio of 3:1 ideal, B2C SaaS 2.5:1 acceptable.
 
-**Structure 1 — Established author / major publisher (Tor, Hachette/Orbit, estate-held IP):**
+**Does conversion go up or down under read-only?** [CURIOUS] — I expect ebook-to-sub **conversion up modestly (15% → 17–19%)** because the Authors Guild–aligned reader now trusts the product; **retention neutral-to-down slightly** because the world is finite (no surprise grafts); **reactivation up** because readers who lapsed come back when the author ships an expansion. Net LTV likely flat to +10%.
 
-| Line | Split |
-|---|---|
-| Ebook sale (list $7.99) | Publisher/author: 70% → $5.59. Platform: 30% → $2.40 (minus payment + delivery costs) |
-| Subscription revenue attributed to world | Author + publisher: 40%. Platform: 60% |
-| Canon-stewardship bonus (see §4C) | +5% to author for active canon updates |
+### B. Rev-share structures — 3 tiers refined
 
-Defensible frame: "We match Kindle on ebooks; our sub share (40%) is better than Audible non-exclusive (30%) and many times better than KU per-page."
+| | Structure 1: Established author / major publisher | Structure 2: Mid-tier author (wedge) | Structure 3: Platform-published new author |
+|---|---|---|---|
+| Ebook margin | Author/publisher keeps 100% | Author keeps 100% | Platform takes 30%, author 70% |
+| Sub-share to author | **40–45%** (hold; product more valuable to them under read-only — keep Audible-parity floor) | **50%** (Audible parity, firm) | **70%** (platform captures ebook margin) |
+| Stewardship bonus | +5% for expansion cadence ≥1/year + canon-bible updates | +5% for same | +5% for same |
+| Training rights | Excluded by contract | Excluded by contract | Excluded by contract |
+| Up-front advance | $100K–$500K | $25K–$100K | $0–$10K |
 
-**Structure 2 — Mid-tier author (the wedge cohort):**
+**On Structure 1: should sub-share drop from 40% because read-only makes the product stronger / appetite higher?** Argue both:
 
-| Line | Split |
-|---|---|
-| Ebook sale | Author/publisher: 70%. Platform: 30% |
-| Subscription | Author + publisher: **50%**. Platform: 50% |
-| Advance | $10-50K recoupable against sub-share only |
-| Floor | $X/month guaranteed in year 1 (size depends on deal) |
-| Canon-stewardship bonus | +5% for canon updates |
+- *Drop to 35%:* Under read-only, we are offering something they cannot get elsewhere (we are the only Reference Rights product aligned with Created by Humans). Appetite is higher. Competitive benchmark: Spotify takes 30% per [Tunecore](https://www.tunecore.com/guides/how-much-does-spotify-pay); ACX non-exclusive at 25% per [ACX help](https://help.acx.com/s/article/audible-s-new-royalty-model); Kindle 30% on the 70/30 split. Platforms routinely take 25–40%.
+- *Hold at 40%, frame as ceiling:* The negotiation anchor matters. If Structure 1 goes in at 35%, we lose signing-event PR ("bigger than Audible exclusive"). Structure 1 at 40% *with +5% stewardship* lets the author cite "45% sub-share" publicly — a headline that recruits Structure 2 authors.
 
-Defensible frame: Matches [Audible new-model exclusive 50%](https://help.acx.com/s/article/audible-s-new-royalty-model). Identical language in the pitch deck.
+**Recommendation: Hold at 40% sub-share + 5% stewardship = 45% ceiling. Use the headline as acquisition collateral.** The extra 5% is cheap for us and narratively load-bearing.
 
-**Structure 3 — Platform-published new author:**
+### Canon-stewardship bonus — reworked for read-only
 
-| Line | Split |
-|---|---|
-| Ebook sale | Author: 50% of list (better than KDP standard on a platform publication). Platform: 50% |
-| Subscription | Author: **70%**. Platform: 30% |
-| Advance | $5-15K |
-| Floor | Low, symbolic |
-| Canon-stewardship bonus | +5% |
+Under V1, the bonus compensated the author for *curating session grafts*: reviewing AI-generated canon extensions, deciding what became official. Under read-only, there are no grafts. So the bonus incentivizes:
 
-Platform economics: platform IS the publisher, so ebook margin funds the higher sub-share. Author gets two revenue streams in one deal with no agent, no submission cycle, no rejection pipeline.
+1. **Canon bible expansion:** author ships addenda to the bible (new location notes, character backstory clarifications, timeline corrections) at a defined cadence (≥2 per quarter).
+2. **Ambiguity resolution:** author reviews quarterly reports of "top reader queries the bible could not fully answer" and ships bible updates to close gaps.
+3. **Expansion cadence:** author releases at least one canonical expansion (novella, short story, region guide, character study) per year that unlocks a new canon layer.
 
-### "We pay better than Spotify" evidence chart
-
-Per reader-hour paid to creators (normalized to comparable consumption of ~20 pages per hour of reading, ~1 minute per Spotify play, ~1 hour per audiobook consumption):
-
-| Platform | Creator payout per consumer-hour |
-|---|---|
-| Spotify (music, per hour of listening, ~$0.003-$0.005 × 15 tracks) | ~$0.05-$0.08 |
-| Kindle Unlimited (per hour of reading, ~$0.0045 × 20 pages) | ~$0.09 |
-| Audible (Originals; depends on plan value, engagement) | ~$0.40-$0.80 `[UNVERIFIED]` |
-| **Persistent Fiction — Structure 1 author (40% of $14.99/mo ÷ ~20 reading hours/mo)** | **~$0.30** |
-| **Persistent Fiction — Structure 2 author (50% of $14.99/mo)** | **~$0.37** |
-| **Persistent Fiction — Structure 3 author (70% of $14.99/mo)** | **~$0.52** |
-
-`[CURIOUS]` Even our most platform-favorable structure pays authors more per reader-hour than Kindle Unlimited pays and is in the same order of magnitude as Audible Originals. The "we pay better than Spotify" chart is conservative — we pay 4-10x Spotify's creator rate on an hour-for-hour basis.
+This is the gardener's contract, not the editor's.
 
 ### C. Expansion economics
 
-Incentive design question: how do we keep authors *releasing* into their worlds (sequels, region packs, character arcs) rather than dropping the bible and walking?
+Every expansion = new ebook (standard KDP terms) + unlocks new canon layer in Canon Access (no extra cost to existing subs, but drives reactivation and reduces churn).
 
-Mechanisms:
+**Proposed cadence incentive:**
+- Expansion every 12 months → 50% sub-share (standard)
+- Expansion every 9 months → 52% sub-share
+- Expansion every 6 months → 55% sub-share
+- ≥4 expansions/year → capped at 55% sub-share
 
-1. **Expansion ebook = new unlock layer.** Author releases a sequel or companion book; purchase grants new world-content unlock. Platform takes standard ebook cut; author gets full ebook royalty + permanent sub-share bump (e.g., +3%) for keeping the world alive.
-2. **Canon stewardship bonus (+5%).** Authors who respond to canon questions, sign off on new generated arcs, or deliver quarterly "canon updates" (world events, new faction brief, character status) earn +5% on sub-share for that quarter. This converts author attention from a cost to a revenue lever.
-3. **Retirement ramp.** Authors who stop engaging drop back to baseline share. No penalty, no cliff — just no bonus. Keeps the incentive gentle.
+Caps at 55% because the platform must sustain infrastructure costs. The nonlinear step ensures occasional novellas (Sanderson-style mid-series bridges) don't ratchet the whole rate permanently.
 
-The point of canon stewardship is twofold: (a) quality lock for readers, and (b) retention hook for authors. Once an author is earning monthly canon-stewardship income, they have an asset they don't want to abandon.
+**[CURIOUS]:** Per [Aethon Books' release schedules](https://aethonbooks.com/2025/12/26/january-2026-litrpg-progression-fantasy-releases/), LitRPG writers routinely ship 4–6 books/year. LitRPG-native authors would max out this incentive structure by default — they are structurally aligned with read-only because they already operate on canon cadence as a business model. Revisit LitRPG as a year-two vertical.
 
-### D. World Store as acquisition channel
+### D. World Store as acquisition
 
-The store funnel:
+Unchanged core logic: the ebook store (Amazon, Dragonsteel, Barnes & Noble, wherever the author sells) *is* the CAC. Every ebook sale that unlocks a Living Edition is a high-intent signup.
 
-1. **Browse** — the store surfaces Living Worlds organized by fandom, trope, and mood, not by "AI features." Covers, blurbs, sample text. Reads like an indie bookstore front table. Not like an app store.
-2. **Free preview** — first chapter of the ebook + first-act demo of the interactive world. Both surface side-by-side on the product page.
-3. **Buy ebook** — straight KDP-style purchase, Apple/Google-compliant pricing $2.99-$9.99.
-4. **Unlock interactive** — automatic on purchase, gated behind free 7-day subscription trial OR existing subscription.
-5. **Start subscription** — default $14.99/mo; discount tier $9.99/mo annual-prepaid.
+Under read-only, the Living Edition landing page emphasizes:
+- "Your ebook purchase already paid the author."
+- "Canon Access is the reading companion subscription."
+- "The AI does not write canon. The author wrote canon."
+- Explicit one-line: *Reference Rights only. No AI training on the author's text. Authors Guild–compatible framework.*
 
-Free tier for no-purchase prospects: the platform-authored demo world (Section 3), free forever, unlimited. It is deliberately good enough to be the showpiece but narratively self-contained, so it doesn't cannibalize author worlds.
+### E. New revenue lines — constrained
+
+**Author Insights Dashboard**
+
+Premium author feature. Aggregated, anonymized engagement data surfaced to the author only. Example outputs:
+
+- "Readers asked about Kael's mother 3× more than any other backstory element — expansion opportunity."
+- "73% of readers who unlocked the world reached the Imperial Palace location; 18% reached the Hollow Cairn. Consider amplifying discoverability of the Hollow Cairn in the next expansion."
+- "Average session length by character: Kael 14 min, Mira 22 min, Sazed 38 min. Sazed is your product-market fit; pack the next expansion around his arc."
+
+**Positioning:** Bookscan-for-story-intelligence. Per [NielsenIQ BookData](https://nielseniq.com/global/en/landing-page/nielseniq-bookdata-measure/), publishers currently pay subscription fees for sales data; [PubTrack Digital Audio](https://isbndb.com/blog/book-sales-data/) is $500/year base + $250/user. Our dashboard is the only source of *engagement* data — what readers *ask*, not just what they buy.
+
+**Pricing options:**
+- Bundle into author's sub-share as a perk (zero cash cost; recruits authors) — **recommended Year 1**.
+- Standalone subscription tier for publishers at $2,000–$10,000/year/imprint covering all their titles — Year 2+.
+- Funded from author sub-share at 2% skim — avoid this; adversarial framing.
+
+**Market size:** US has ~300 mid-to-major publishers (Big 5 imprints ~80, mid-size ~50, small-press ~150+). If 40% adopt at $5K average ARR = $600K ARR ceiling. Small by itself, but retention is near-100% once integrated into editorial workflow, and it's the strongest *author acquisition* tool we have.
+
+**Publisher aggregate trend reports**
+
+Bookscan-like macro reports. "Q3 reader engagement on political intrigue storylines +23% YoY across platform." Never per-world, never per-reader.
+
+**Realistic market:** BookScan has ~1,000 paying publisher subscribers (per industry estimates, unsourced — [UNVERIFIED]). Our reports are complementary, not substitutive — engagement data, not sales data. If we land 50 publishers at $15K ARR = $750K ARR ceiling Year 3. Small revenue line; valuable as a *lobby-and-influence* asset. Frame it as "trends report" with a short paid report and free excerpts to seed industry press coverage.
+
+**Opt-in derivative training datasets**
+
+Not a revenue line. An **efficiency play**. World-specific fine-tuning (with explicit author + reader consent) would let us run smaller, cheaper inference models per world. Estimated savings: a fine-tuned 8B model on a specific world bible can replace a 70B general model for most retrieval tasks. At scale, **30–60% inference cost reduction** [UNVERIFIED estimate — benchmark pending]. Requires opt-in UI flow for both authors (canon training consent) and readers (session data consent).
+
+**Explicit NOT:** No raw data monetization. No targeted ads inside sessions. No reader attention marketplace. No surveillance-adjacent revenue. These are architectural exclusions written into the Terms of Service and the author contract.
 
 ---
 
-## 5. BRAND AND TONE
+## 5. BRAND AND TONE (refined)
 
-### Three reference brands (from any market)
+### Brand posture under read-only
 
-The emotional signal, not the category:
+V1 trajectory: Criterion Collection / Moleskine / Letterboxd. **Reconfirm and sharpen under read-only.** The read-only constraint pushes the brand *further* toward publishing artifact and away from software product. Reference set:
 
-- **Criterion Collection.** Shares: reverence for the source material, physical-object feel even when digital, tastemaker authority that respects rather than remixes. We are the Criterion of living worlds.
-- **Letterboxd.** Shares: community of serious consumers who find the mainstream marketing vocabulary embarrassing. Letterboxd won by treating film fans as literate adults. Readers deserve the same tone.
-- **Moleskine / Leuchtturm1917.** Shares: tactility of craft in a digital-default world. The product aesthetic is quiet, confident, made-for-people-who-take-this-seriously. Not shouty.
+- **Criterion Channel** for the "curated, reverent, archival" posture (per [Criterion on Letterboxd](https://letterboxd.com/criterion/) — they publish monthly additions lists like a journal).
+- **Library of America** for the "definitive edition" gravitas.
+- **Substack** for the "reader-native, author-first, post-platform" posture.
+- **Folio Society** for the "beautiful object" sensibility.
+- **New Yorker / Harper's** for the typography and restraint.
 
-(Explicit anti-references: any "AI" startup, any gaming brand, any metaverse-adjacent brand, Quibi, anything with motion graphics on the homepage.)
+What we avoid:
+- AI Dungeon / NovelAI / Character.ai aesthetic (anime, "create anything," limitless).
+- Gamer aesthetic (neon, XP bars, inventories).
+- Silicon Valley AI aesthetic (gradients, floating orbs, "magic").
 
-### Five candidate name directions
+### Name directions — 5 candidates
 
-Not final names — directions:
+Read-only permits more book-native names than V1 allowed because we no longer need to signal "persistent world" or "interactive fiction":
 
-1. **Publishing-house cadence.** Single-word, vaguely archaic, confident. Directional examples: *Folio, Chapterhouse, Mercer, Gallows, Marginalia.* Plays as a book imprint.
-2. **Reader-posture verb.** Evokes the reading action. Directional examples: *Dwell, Return, Reread, Linger, Between.* Plays as a reader state, not a product.
-3. **World-as-place.** Framing the product as a location the reader goes to. Directional examples: *Elsewhere, Everlib, Worldside, Hearthlight.* Plays as somewhere you visit.
-4. **Craft-object noun.** A specific physical reading-adjacent object. Directional examples: *Inkhorn, Quillmark, Codex, Bindery.* Plays as bookishness.
-5. **Antonym-to-gaming.** Deliberately plain, anti-techy, almost boring. Directional examples: *The Reading Room, The Annex, Longform, Continued.* Plays as a quiet confident refusal of the "interactive fiction" category.
+1. **Canon** / **Canon.press** / **canonlibrary.com**
+Rationale: Clean, authoritative, book-native. "Canon" is already the word fantasy/SF readers use for the material we license. A reader saying "I subscribed to Canon for the *Stormlight* bible" is immediately intelligible.
+Risk: Crowded namespace (Canon the camera company, canon.fm, religious canon connotations). Domain will be hard.
 
-Recommended direction for primary: **(2) Reader-posture verb** — it's what we want readers to feel, not what the product is. Names in this direction read as verbs-made-nouns (Kindle, Substack, Audible all follow this pattern — a verb or action-adjacent noun). Secondary candidate: **(3) World-as-place**, which leans more romantic and is stronger on the consumer marketing surface but weaker for publisher conversations.
+2. **Marginalia**
+Rationale: Marginalia are notes in the margin — the annotated-edition ancestor. Evokes Fermat, Coleridge, the reader-writer. Text-first, book-literate, prestige-coded.
+Risk: Obscure; may require education in copy. "Subscribe to Marginalia" doesn't self-explain.
 
-Explicit nots: no names containing "AI," "Gen," "Smart," "Neural," "Quest," "Realm," "Forge," or gerund-verbs ending in "-ly" or "-ify." No portmanteaus. No missing vowels. No lowercase-branded tech-startup conventions. The product's name should feel as if it could have existed in 1987.
+3. **Codex** / **Codex Editions**
+Rationale: Medieval book form; warm SFF connotation (Codex Alera, Warhammer codexes); signals authorial canon.
+Risk: "Codex" is wildly used in gaming / RPG / Substack already.
+
+4. **Gloss** / **Gloss Editions**
+Rationale: A "gloss" is a marginal commentary or explanation. Compact, book-native, one-syllable. "I use Gloss for *Mistborn*" works.
+Risk: Read as "glossy" (surface, shallow) by some.
+
+5. **The Appendix** / **Appendix**
+Rationale: Every SFF reader has read the appendix at the back of the book until the covers fell off — the Silmarillion appendix, the Wheel of Time glossaries, the Dune "Manual of Muad'Dib." We are the appendix that answers. Devastating fit to the product.
+Risk: Body-part connotation; "appendix" suggests supplementary when we'd prefer essential.
+
+**Ranked recommendation:**
+1. **The Appendix** — best emotional fit to the reader.
+2. **Canon** — best conversion fit to the author/publisher.
+3. **Marginalia** — best brand fit to the Criterion posture.
+
+Test all three in parallel. My lean: **The Appendix** — it is the one name a 40-book-a-year reader already has an emotional history with.
+
+### Voice guidelines
+
+- Sentence-first, not feature-first.
+- Present tense. Declarative.
+- No em-dashes where a period works. No "transform," "unlock," "elevate" (the generic SaaS verbs).
+- Never "AI" in consumer copy unless disambiguating from a user concern. The product is "Canon Access." What it runs on is a footnote.
+- Reviews and critic quotes in typography. Screenshots of canon passages as visual hero content. Author portraits in black-and-white.
+- Serif body. Sans headlines. Typographic rigor.
 
 ---
 
 ## TL;DR
 
-- **Category: Persistent Fiction.** Text-only is the product, not a limitation — market it as alignment with how serious readers already consume story, explicitly anti-adaptation. The reader who hated the TV adaptation of their favourite book is the core customer.
-- **Publisher-first, not author-first.** Signable mid-tier SFF publishers (Baen, Angry Robot, Solaris) and TTRPG publishers with original IP (Kobold/Midgard, Free League/Vaesen, Chaosium/Glorantha) are the wedge. Estates and marquee authors come in year two after proof-of-model. Lead every conversation with "we pay better than Spotify, we pay better than Kindle Unlimited, canon stays yours."
-- **Ebook unlocks world. The store is the CAC.** Paid ads (Meta $38 median CPA, TikTok $20-60) only work at retention >9 months; the ebook-to-subscriber conversion at 15% × 9-month retention yields ~$20 LTV per ebook sale — paid acquisition becomes supplemental, not primary.
-- **Three rev-share structures, all with canon-stewardship bonus.** Established (40% sub-share), mid-tier (50%, matches Audible exclusive), platform-published new author (70%, because platform captures ebook margin). Advances are recoupable against sub-share only; ebook royalty is paid from day one.
-- **Brand stance: Criterion Collection, not AI Dungeon.** Reader-posture-verb naming direction (Kindle-style verb-nouns). Zero AI-centric branding. Zero game-centric branding. The product should feel like it could have existed in 1987, with technology that arrived in 2026.
+1. **Rename the category before V1 pricing lands.** "Living Editions" / "Canon Access" / brand candidate "The Appendix." Exit "interactive fiction." Enter a publishing-artifact shelf with three competitors instead of three hundred.
+2. **Estate lane opens Year 1.** Asimov, Jordan (via Sanderson bridge), Niven, and Zelazny become plausible year-one targets because read-only is architecturally compatible with the Authors Guild / Created by Humans Reference Rights framework — the legal objection is gone. Pitch every estate under that framework by name.
+3. **Hold sub-share at 40% for major authors, 50% mid-tier, 70% platform-published; publish "45% with stewardship" as the headline.** Audible-parity at the floor, Spotify-parity ceiling. Drop the New Author Publishing Program from Year 1 — read-only makes thin worlds feel thin.
+4. **LTV/ebook is $27 platform + $27 author at 15% conversion / 12-month retention.** Target blended CAC $20–35 via BookTok + author channels. Paid CAC ceiling $60 (TikTok low end, Meta median floor). The ebook store is the CAC; protect that flywheel.
+5. **Author Insights Dashboard is the strongest year-one author-acquisition tool, not a revenue line.** Bundle free. Publisher aggregate reports are a Year 3 lobbying asset, not a P&L lever. Training-dataset opt-in is an efficiency play (30–60% inference cost reduction), never a data sale. Raw data monetization, ads, attention marketplace — all architectural exclusions.
 
-## Sources
+---
 
-- [Kindle Unlimited KENP 2026 rate guide - HMD Publishing](https://hmdpublishing.com/blog/kindle-unlimited-author-earnings-per-page-guide)
-- [KDP ebook royalty structure - Amazon](https://kdp.amazon.com/en_US/help/topic/G200644210)
-- [Spotify per-stream payout data 2025 - Royalty Exchange](https://royaltyexchange.com/blog/how-music-streaming-platforms-calculate-payouts-per-stream-2025)
-- [Audible/ACX new royalty model](https://help.acx.com/s/article/audible-s-new-royalty-model)
-- [ACX royalty details - Kindlepreneur](https://kindlepreneur.com/audible-royalty-changes/)
-- [Pathfinder Infinite license model - Paizo](https://support.pathfinderinfinite.com/hc/en-us/articles/4407194475917-Ownership-and-License-Questions)
-- [Paizo ORC License announcement](https://paizo.com/community/blog/v5748dyo6si7v)
-- [Chaosium ORC participation](https://www.chaosium.com/blogchaosium-is-part-of-paizos-open-rpg-creative-license-initiative/)
-- [Free League open licenses](https://freeleaguepublishing.com/community-content/free-tabletop-licenses/)
-- [Tolkien Estate / Curtis Brown Heritage - Variety](https://variety.com/2025/biz/global/curtis-brown-j-r-r-tolkien-literary-estate-represent-1236513847/)
-- [Substack conversion benchmarks - Simon Owens](https://simonowens.substack.com/p/whats-a-realistic-conversion-rate)
-- [Substack revenue/growth - Sacra](https://sacra.com/c/substack/)
-- [Meta ad CPM/CPA benchmarks - Sovran](https://sovran.ai/benchmarks/meta-ads-cpm-by-industry)
-- [BookTok indie author impact - Storial](https://storial.co/indie-and-self-published-books-that-went-viral-on-booktok/)
-- [Sanderson Cosmere Apple TV deal - Den of Geek](https://www.denofgeek.com/books/brandon-sanderson-unprecedented-control-apple-tv-cosmere-adaptations/)
-- [Sanderson Mistborn game comments - GameSpot](https://www.gamespot.com/articles/brandon-sanderson-teases-potential-aaa-mistborn-video-game/1100-6537216/)
-- [Wattpad Paid Stories / Originals model - TechCrunch](https://techcrunch.com/2023/10/03/wattpad-ditches-paid-content-stories-program-for-a-freemium-model/)
-- [Tor Books overview - Wikipedia](https://en.wikipedia.org/wiki/Tor_Books)
-- [Angry Robot submissions process](https://angryrobotbooks.com/2024/04/angry-robot-open-submissions-period-2024/)
+## DELTA vs V1
+
+**What flipped:**
+- **Estate lane moves from Year 2+ to Year 1** for the subset whose main objection was canon-generation risk (Asimov, Jordan, Niven, Zelazny). The Created by Humans Reference Rights framework gives legal cover that didn't exist before.
+- **New Author Publishing Program moves from Year 1 wedge to Year 3.** Thin worlds feel thin under read-only; the program needed the extension mechanic to work.
+- **Category name shifts off "Persistent Fiction" / "Interactive Fiction."** "Living Editions" / "The Appendix" / "Canon" become viable because we no longer need to signal persistence or interactivity-as-world-change.
+
+**What strengthened:**
+- **Text-only positioning** — already strong, now doubled (AI neither writes nor voices nor pictures the canon).
+- **Author control narrative** — the #1 Authors Guild and estate fear is architecturally answered. This is the single biggest acquisition lever and it is now free to claim.
+- **Publisher pitch** — read-only sidesteps most of the AI-rights legal tangle that was slowing publisher legal review in V1.
+- **Brand posture toward Criterion / Folio Society / Library of America** — V1 could have leaned this way; V2 *must*. The aesthetic is load-bearing now because it signals "not an AI product."
+- **Sanderson as beachhead** — his Apple deal pattern (unprecedented author control, no studio adaptation without his approval) is precisely the pattern we mirror. He should be pitched first, publicly.
+
+**What weakened:**
+- **Retention ceiling** — finite worlds cap session-count per reader. Expansion cadence is now the primary retention lever, not emergent session-grafts. Authors who don't expand will see churn.
+- **Differentiation vs "annotated ebook" products** — a well-funded competitor (Kindle with Alexa integration, Apple Books with Apple Intelligence) can credibly approximate the read-only reading companion. The moat is author relationships and canon depth, not tech.
+- **LitRPG / progression-fantasy fit** — read-only fits the genre's canon-cadence business model, but genre readers are AI-burnt from ChatGPT slop; brand skepticism will be higher per reader than in prestige SFF. Reclassify LitRPG as Year 2, not Year 1.
+- **Sub-share negotiation leverage** — under V1 we could argue "we're building new canon for you." Under V2 we argue only "we're surfacing what you wrote." The value proposition is narrower, which caps how high sub-share can anchor. 45% ceiling is probably the right call, but it is a ceiling.
+- **Conversion from casual reader** — the "first act free" funnel is dead. The replacement funnel (Tour → Preview → Companion) is untested and needs its own conversion benchmarking before launch.
