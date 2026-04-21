@@ -1,0 +1,101 @@
+{
+  "topic": "Kernel Live Patching Safety and Consistency Models",
+  "date": "2026-04-21",
+  "status": "Complete",
+  "question": "Deep dive into the safety and consistency models of kernel live patching. Explain how the kernel ensures a patch is safely applied using quiescent states, stack checking, and consistency models (e.g., kpatch vs kGraft). What happens when a task is blocked while executing a function that needs patching?",
+  "context": "This investigation explores the technical mechanisms that allow the Linux kernel to apply code patches at runtime without rebooting, focusing on the safety protocols that prevent kernel panics or inconsistent states during the transition.",
+  "quick_reference": {
+    "title": "Kernel Live Patching Safety Mechanisms",
+    "columns": ["Mechanism", "Description", "Safety Role"],
+    "rows": [
+      ["Hybrid Consistency", "Per-task migration between 'universes'", "Ensures no task sees partial patches"],
+      ["Stack Checking", "Inspects sleeping task call stacks", "Verifies it's safe to flip a blocked task's state"],
+      ["Quiescent States", "Migration at syscall exit/entry", "Provides safe points for task state transitions"],
+      ["Fake Signals", "Waking tasks from interruptible sleep", "Forces progress for tasks blocked in syscalls"]
+    ]
+  },
+  "key_findings": [
+    "The Linux kernel livepatching (klp) subsystem employs a hybrid consistency model that merges kpatch's stack checking with kGraft's per-task lazy migration.",
+    "A 'Universe' model is used to track patch state; each task is either in the 'old' or 'new' universe and never executes a mix of both versions during a single execution flow.",
+    "Redirection to patched functions is implemented via ftrace and -fentry hooks, allowing the kernel to intercept calls at the function entry point.",
+    "Stack checking relies on the HAVE_RELIABLE_STACKTRACE feature and objtool to ensure that a sleeping task is not currently executing any function targeted for patching before migrating its state.",
+    "Tasks that are blocked in interruptible sleep are woken up using 'fake signals' to encourage them to reach a quiescent state (like a syscall boundary) where migration can safely occur.",
+    "If a task remains blocked in a patched function indefinitely, the transition is stalled; administrators can monitor progress via sysfs and manually cancel the transition if necessary."
+  ],
+  "concepts": [
+    {
+      "name": "Universe Model",
+      "description": "A tracking mechanism where every task is assigned to either the original or the patched version of the code, ensuring atomicity at the task level."
+    },
+    {
+      "name": "Quiescent State",
+      "description": "A safe point in task execution, typically a syscall boundary or kernel-to-user transition, where the task holds no kernel locks and its state is stable for migration."
+    },
+    {
+      "name": "ftrace hooks",
+      "description": "The underlying redirection mechanism that uses compiler-generated NOPs at function start to jump to patch code."
+    },
+    {
+      "name": "Hybrid Consistency",
+      "description": "The integration of kpatch (immediate stack check) and kGraft (lazy per-task migration) techniques into the upstream kernel livepatching core."
+    }
+  ],
+  "tensions": [
+    "Immediate patching via stack checking provides faster transitions but requires architecture-specific reliable stack unwinding, which is not available on all platforms.",
+    "Forcing a patch transition (bypassing safety checks) can resolve stuck transitions but permanently disables safe module unloading to prevent potential panics."
+  ],
+  "open_questions": [
+    "How do out-of-order execution and memory barriers impact the reliability of ftrace hooks during high-concurrency function entry?",
+    "What is the specific impact of live patching on proprietary or out-of-tree kernel modules that may not be visible to objtool?"
+  ],
+  "sources": [
+    {
+      "title": "Livepatch — The Linux Kernel documentation",
+      "url": "https://www.kernel.org/doc/html/latest/livepatch/livepatch.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Livepatch Consistency Model",
+      "url": "https://www.kernel.org/doc/html/latest/livepatch/consistency-model.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "A hybrid approach to kernel live patching",
+      "url": "https://lwn.net/Articles/633105/",
+      "tier": "blog"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Kernel live patching provides a safe, reboot-less update path through a robust per-task consistency model.",
+      "so_what": "Reliable runtime patching reduces downtime for critical security fixes but depends on specific hardware support for reliable stack traces.",
+      "bullets": [
+        "Upstream klp uses a hybrid of kpatch and kGraft to balance transition speed and safety.",
+        "Patching requires HAVE_RELIABLE_STACKTRACE support; unsupported architectures revert to slower, less reliable methods.",
+        "Blocked tasks are the primary cause of stalled patches, requiring operational monitoring of the transition state."
+      ],
+      "action_required": "Ensure production kernels are compiled with CONFIG_LIVEPATCH and objtool support to enable these safety features."
+    },
+    "product_owner": {
+      "headline": "Live patching allows for critical security updates without interrupting running applications or requiring server reboots.",
+      "so_what": "This technology enables 100% uptime for security compliance, though some complex updates may still require a standard maintenance window.",
+      "bullets": [
+        "Updates are applied 'in the background' while the system is running.",
+        "The system ensures that no program gets 'confused' by seeing half of an update.",
+        "In rare cases where an update gets stuck, it can be safely cancelled without crashing the system."
+      ],
+      "risk_level": "Low",
+      "next_steps": {
+        "po_action": "Define the policy for when to use live patches versus scheduled reboots for security compliance.",
+        "work_to_assign": [
+          "Audit existing infrastructure for CONFIG_LIVEPATCH compatibility.",
+          "Establish monitoring for livepatch transition states in the fleet."
+        ]
+      },
+      "questions_to_ask_engineering": [
+        "Which of our current server architectures support reliable stack checking for live patches?",
+        "What is our standard procedure if a patch transition stalls due to a blocked task?"
+      ]
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "topic": "Red Hat kpatch and Linux Kernel livepatch Internal Mechanics",
+  "date": "2026-04-21",
+  "status": "Complete",
+  "question": "Deep dive into the internal mechanics of Red Hat kpatch and the Linux kernel livepatch subsystem. Explain the exact mechanism of function redirection using ftrace and INT3 instructions, how klp-build (replacing kpatch-build) creates payload modules, and how objtool handles architectural fixups (replacing GCC plugins).",
+  "context": "Red Hat kpatch and the Linux livepatch subsystem provide a rebootless patching mechanism for the running kernel. This investigation details the function redirection mechanism, the modern klp-build compilation pipeline, and the management of architectural fixups via objtool.",
+  "quick_reference": {
+    "columns": ["Mechanism", "Description", "Key Technology"],
+    "rows": [
+      ["Function Redirection", "Intercepts function calls at the -fentry site to redirect execution to patched code.", "ftrace (klp_ftrace_handler)"],
+      ["Instruction Update", "Safely modifies running code by replacing instructions with breakpoints.", "INT3 (0xCC opcode)"],
+      ["Module Creation", "Extracts binary differences between original and patched kernels into ELF objects.", "klp-build / objtool"],
+      ["Data Extension", "Associates metadata with existing objects via an RCU-protected hash table.", "Shadow Variables"]
+    ]
+  },
+  "key_findings": [
+    "The Linux livepatch subsystem leverages the ftrace profiling infrastructure to intercept and redirect function execution. By registering a ftrace_ops handler (klp_ftrace_handler) at a function's -fentry call site, the subsystem modifies the instruction pointer (IP) on the stack, causing the CPU to jump directly to the patched function body.",
+    "Instruction modification on a live system is performed using the INT3 (breakpoint) mechanism. Ftrace replaces the first byte of a call site with the 0xCC opcode; CPUs hitting this trigger a breakpoint exception handler that safely manages the redirection or waits for instruction updates to complete, avoiding issues with multi-byte instruction modification.",
+    "As of Linux 6.19 (Feb 2026), the legacy kpatch-build pipeline has been superseded by klp-build for upstream kernel livepatching. klp-build generates patch modules through a dual-compilation process of original and patched kernel sources using -ffunction-sections and -fdata-sections, extracting changed sections and their relocations into a standalone patch module.",
+    "Architectural fixups and binary normalization, previously handled by GCC plugins in the kpatch-build pipeline, have migrated to objtool in the upstream kernel. On architectures like ppc64le, objtool now manages Table of Contents (TOC) pointer reloading (r2 register) and other necessary fixups when transitioning between original and patched function contexts.",
+    "Shadow variables provide a mechanism for extending kernel data structures without altering their binary layout. New metadata is stored in a global, RCU-protected hash table (klp_shadow_hash) and associated with the original object's pointer, allowing patches to track new state while maintaining structure size compatibility."
+  ],
+  "concepts": [
+    {
+      "name": "-fentry",
+      "description": "A GCC compiler option that inserts a call to a profiling function (mcount/fentry) at the very beginning of every function, providing an ideal hook point for ftrace and livepatching."
+    },
+    {
+      "name": "klp_ftrace_handler",
+      "description": "The specific ftrace callback registered by the livepatch subsystem that performs the actual redirection of execution to the patched version of a function."
+    },
+    {
+      "name": "INT3",
+      "description": "The 0xCC opcode used to trigger a software breakpoint exception, allowing the kernel to safely pause or redirect execution while patching multi-byte instructions."
+    },
+    {
+      "name": "klp-build",
+      "description": "The modern replacement for kpatch-build as of Linux 6.19, serving as the official tool for generating livepatch modules from source diffs in the upstream kernel."
+    },
+    {
+      "name": "objtool",
+      "description": "The kernel's binary analysis and manipulation tool, which now handles architectural fixups (like ppc64le TOC management) for livepatch modules, replacing legacy GCC plugins."
+    },
+    {
+      "name": "Shadow Variable",
+      "description": "An API in the livepatch subsystem that associates additional data with existing data structures via a hash table keyed by the object's memory address."
+    }
+  ],
+  "tensions": [
+    "The reliance on ftrace and -fentry introduces a small overhead for every patched function call, which may be significant in high-frequency execution paths.",
+    "Binary diffing is sensitive to compiler optimizations and section layout changes, which can lead to larger patch modules or extraction failures if not carefully managed.",
+    "Shadow variables introduce an additional lookup step (hash table access) when accessing extended state, unlike native structure fields which are fixed offsets."
+  ],
+  "open_questions": [
+    "What are the precise performance impacts of shadow variable lookups in critical networking or storage paths?",
+    "How does the livepatch consistency model (stack checking) impact system responsiveness during the transition period of a large patch?",
+    "Are there specific GCC versions or optimization flags that significantly degrade the efficiency of klp-build?"
+  ],
+  "sources": [
+    {
+      "title": "Kernel Livepatching (KLP)",
+      "url": "https://www.kernel.org/doc/html/latest/livepatch/livepatch.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Ftrace: The hidden INT3",
+      "url": "https://lwn.net/Articles/576443/",
+      "tier": "blog"
+    },
+    {
+      "title": "Shadow Variables Documentation",
+      "url": "https://www.kernel.org/doc/Documentation/livepatch/shadow-vars.txt",
+      "tier": "official_doc"
+    },
+    {
+      "title": "kpatch: dynamic kernel patching",
+      "url": "https://github.com/dynup/kpatch",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Kernel livepatching moves to a more integrated upstream model with klp-build and objtool as of Linux 6.19.",
+      "so_what": "By transitioning to klp-build and leveraging objtool for architectural fixups, the livepatching pipeline is more robust and better aligned with core kernel build processes.",
+      "bullets": [
+        "Leverages standard ftrace infrastructure, ensuring broad compatibility with modern Linux kernels.",
+        "Uses INT3 breakpoint mechanics to prevent instruction corruption during live code modification.",
+        "Supports data structure extensions via shadow variables, allowing complex fixes without breaking existing binary interfaces.",
+        "klp-build automates the extraction of binary differences into deployable modules, replacing kpatch-build."
+      ],
+      "action_required": "Evaluate the transition to Linux 6.19+ to benefit from the more stable klp-build and objtool-based livepatching pipeline."
+    },
+    "product_owner": {
+      "headline": "Modern Linux systems can now be patched for security bugs with improved toolchain integration.",
+      "so_what": "The move to klp-build and objtool ensures that livepatching remains a first-class citizen in the Linux ecosystem, providing reliable rebootless updates.",
+      "bullets": [
+        "Eliminates the 'maintenance window' requirement for most security-related kernel fixes.",
+        "Ensures system stability by using a safe, built-in mechanism for redirecting software instructions.",
+        "Allows developers to add hidden data to existing system components without causing crashes or compatibility issues.",
+        "Reduces the risk of unpatched vulnerabilities in systems that cannot be easily rebooted."
+      ],
+      "risk_level": "Low",
+      "next_steps": {
+        "po_action": "Prioritize the integration of livepatching into the fleet management strategy to improve security posture.",
+        "work_to_assign": [
+          "Assess fleet compatibility with klp-build and modern livepatching mechanisms.",
+          "Establish a workflow for generating and testing patch modules using klp-build and objtool."
+        ],
+        "leadership_input": "Confirm support for the new klp-build pipeline on all target hardware architectures (e.g., x86_64, ppc64le)."
+      },
+      "questions_to_ask_engineering": [
+        "What is the expected performance impact on our primary workloads when multiple live patches are active?",
+        "Do we have the tooling in place to safely revert a live patch if stability issues are detected?",
+        "Which of our supported kernel versions are fully compatible with the new klp-build subsystem?"
+      ]
+    }
+  }
+}
