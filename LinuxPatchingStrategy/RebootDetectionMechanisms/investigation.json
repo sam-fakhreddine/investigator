@@ -1,0 +1,108 @@
+{
+  "topic": "RHEL/Oracle Linux Reboot Detection Mechanisms",
+  "date": "2024-05-23",
+  "status": "Complete",
+  "question": "How do `needs-restarting` and `yum-utils`/`dnf-utils` work on RHEL/Oracle Linux (proc maps, deleted library detection via /proc/*/maps) to identify necessary reboots and service restarts, and how do they differ across RHEL 8, 9, and 10? How does the SSM Patch Manager `RebootOption` (`RebootIfNeeded` vs `NoReboot`) parameter impact operational compliance state?",
+  "context": "Investigating the internal mechanics of reboot detection on enterprise Linux distributions and their integration with AWS SSM Patch Manager for compliance reporting.",
+  "quick_reference": {
+    "title": "Reboot Detection & SSM Compliance Summary",
+    "columns": ["Component", "Mechanism / Implementation", "Operational Impact"],
+    "rows": [
+      ["needs-restarting", "Scans /proc/[PID]/maps for '(deleted)' shared library segments", "Identifies processes running on outdated code in-memory"],
+      ["RHEL 8 / 9", "DNF4 (Python) plugin using static 'critical' package lists", "Conservative reboot hints; slower execution than DNF5"],
+      ["RHEL 10", "DNF5 (C++) with advisory metadata and systemd integration", "Faster, supports JSON output and systemd 'soft-reboots'"],
+      ["Oracle Linux", "Ksplice in-memory patching + uptrack-show", "needs-restarting -r is NOT Ksplice-aware; reports reboot if new RPM is on disk"],
+      ["SSM NoReboot", "Postpones activation of patched components and kernel", "Leaves instance in 'Non-Compliant' (InstalledPendingReboot) state"]
+    ]
+  },
+  "key_findings": [
+    "`needs-restarting` identifies necessary reboots by scanning `/proc/[PID]/maps` for entries marked as `(deleted)`, which occurs when a library (e.g., .so) or executable is replaced on disk but still mapped in a running process's memory.",
+    "RHEL 8 and 9 utilize a Python-based DNF4 plugin for `needs-restarting`. This version is slower than its successor and relies on hardcoded lists of 'critical' packages to suggest a full system reboot.",
+    "RHEL 10 introduces DNF5 (written in C++), which features a native `needs-restarting` implementation. It is significantly faster, provides `--json` output, and integrates with `systemd` soft-reboots and `reboot_suggested` advisory metadata.",
+    "Oracle Linux leverages Ksplice technology to apply patches to the kernel and core libraries (like `glibc` and `openssl`) in-memory. However, `needs-restarting -r` is NOT natively aware of these in-memory patches and will still report a reboot as required if a newer kernel package exists on disk. To confirm the 'effective' kernel version and avoid unnecessary reboots, specialized tools like `uptrack-show --available` or `ksplice-show` must be used instead of standard DNF/YUM utilities.",
+    "In AWS SSM Patch Manager, the `RebootOption` parameter directly impacts compliance reporting. Selecting `NoReboot` avoids immediate downtime but causes the instance to be flagged as 'Non-Compliant' with an `InstalledPendingReboot` status until a manual reboot and subsequent scan are completed."
+  ],
+  "concepts": [
+    {
+      "name": "needs-restarting",
+      "description": "A tool from yum-utils/dnf-utils that determines if a system or specific services need to be restarted after package updates by analyzing process memory maps."
+    },
+    {
+      "name": "Ksplice",
+      "description": "An Oracle Linux technology that allows for patching the kernel and key userspace libraries (glibc, openssl) without requiring a system reboot."
+    },
+    {
+      "name": "systemd soft-reboot",
+      "description": "A RHEL 10/systemd feature that restarts userspace without a full hardware/kernel reboot, reducing downtime for updates that do not affect the kernel."
+    },
+    {
+      "name": "InstalledPendingReboot",
+      "description": "An AWS SSM compliance status indicating that patches are installed but the instance requires a reboot to become 'Compliant' in the console."
+    }
+  ],
+  "tensions": [
+    "Uptime vs. Compliance: Postponing reboots (SSM NoReboot) maintains availability but results in technical non-compliance and security risk due to inactive patches.",
+    "Automation vs. Precision: RHEL 8/9 static lists are simple but may over- or under-recommend reboots compared to RHEL 10's metadata-driven approach."
+  ],
+  "open_questions": [
+    "How do third-party repositories (e.g., EPEL, NVIDIA) currently format metadata to leverage RHEL 10's native reboot suggestions?",
+    "What is the specific overhead of DNF5's memory scanning on high-PID-count systems compared to DNF4?"
+  ],
+  "sources": [
+    {
+      "title": "How to check which processes need to be restarted after an update",
+      "url": "https://access.redhat.com/solutions/111863",
+      "tier": "official_doc"
+    },
+    {
+      "title": "DNF5 needs-restarting command reference",
+      "url": "https://dnf5.readthedocs.io/en/latest/command_ref/needs-restarting.8.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "SSM Patch Manager Reboot Options",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-reboot-options.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Oracle Linux Ksplice User Guide",
+      "url": "https://docs.oracle.com/en/operating-systems/oracle-linux/ksplice/user-guide.html",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Reboot detection shifts from static lists to metadata-driven automation in RHEL 10.",
+      "so_what": "Inconsistent reboot handling across RHEL and Oracle Linux, combined with SSM 'NoReboot' policies, creates compliance reporting gaps that require manual intervention or Ksplice-aware automation.",
+      "bullets": [
+        "RHEL 10's DNF5 improves detection speed and adds JSON support for better integration with automation pipelines.",
+        "Oracle Linux Ksplice reduces reboot frequency, but standard tools like `needs-restarting -r` are NOT natively aware of in-memory patches and will report a required reboot if a newer kernel package is detected on disk.",
+        "SSM 'NoReboot' policies lock instances into 'Non-Compliant' status despite patches being applied, potentially triggering false security alarms."
+      ],
+      "action_required": "Standardize on DNF5-compatible automation for RHEL 10 and ensure Oracle Linux monitoring uses `uptrack-show` or `ksplice-show` for accurate reboot reporting."
+    },
+    "product_owner": {
+      "headline": "Patching systems without restarting them leaves them showing as 'broken' in AWS reports.",
+      "so_what": "Choosing to skip restarts to avoid downtime will cause our security reports to show systems as 'Non-Compliant,' even if the fixes are installed. This requires manual follow-up to update the reports.",
+      "bullets": [
+        "Security updates are not fully active until the system or specific services are restarted.",
+        "Modern versions of Linux (RHEL 10) can restart much faster without a full 'off and on' cycle using 'soft-reboots'.",
+        "Oracle Linux systems can apply critical updates without downtime via Ksplice, but standard monitoring tools will still report that a restart is 'needed' until confirmed otherwise by specialized commands.",
+        "Using the 'NoReboot' option in AWS SSM leads to a persistent 'Pending Reboot' status that impacts compliance scores."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Decide if 'Non-Compliant' status in AWS is acceptable during critical production windows to avoid downtime.",
+        "work_to_assign": [
+          "Evaluate RHEL 10 soft-reboot compatibility for internal applications to minimize maintenance windows.",
+          "Review patching automation for Oracle Linux to properly leverage Ksplice and improve compliance reporting."
+        ],
+        "leadership_input": "Architects should weigh in on whether 'InstalledPendingReboot' should be treated as a hard compliance failure or an expected operational state."
+      },
+      "questions_to_ask_engineering": [
+        "Can we use RHEL 10's soft-reboot to reduce our patching downtime?",
+        "How much effort is required to automate the 'Ksplice' check for our Oracle Linux instances?"
+      ]
+    }
+  }
+}

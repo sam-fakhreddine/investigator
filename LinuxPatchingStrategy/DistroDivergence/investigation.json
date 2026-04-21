@@ -1,0 +1,107 @@
+{
+  "topic": "RHEL vs Oracle Linux Patching and Kernel Divergence",
+  "date": "2026-04-20",
+  "status": "Complete",
+  "question": "Identify technical and operational divergence points between RHEL (8/9/10) and Oracle Linux (8/9 equivalents), specifically focusing on UEK (Unbreakable Enterprise Kernel) vs RHEL-compatible kernel, live patching support differences (e.g., Ksplice vs kpatch), CVE coverage gaps between RHSAs and ELSAs (Red Hat vs Oracle advisories), and SSM Patch Manager baseline configuration requirements for each distribution.",
+  "context": "This investigation examines the critical technical differences between Red Hat Enterprise Linux and Oracle Linux as they pertain to enterprise patching strategies, kernel lifecycles, and security compliance automation in cloud environments.",
+  "quick_reference": {
+    "title": "RHEL vs Oracle Linux Technical Comparison",
+    "columns": ["Feature", "Red Hat Enterprise Linux (RHEL)", "Oracle Linux (OL)"],
+    "rows": [
+      ["Default Kernel", "RHCK (RHEL-Compatible Kernel)", "UEK (Unbreakable Enterprise Kernel)"],
+      ["Live Patching Tool", "kpatch (RHCK only)", "Ksplice (UEK and RHCK)"],
+      ["Live Patching Scope", "Kernel function-level only", "Kernel and user-space libraries (glibc, openssl)"],
+      ["Security Advisory", "RHSA (Red Hat Security Advisory)", "ELSA (Enterprise Linux Security Advisory)"],
+      ["SSM Baseline", "Mandatory RHEL-specific baseline", "Mandatory OL-specific baseline"]
+    ],
+    "notes": "Oracle Linux maintains binary compatibility with RHEL but diverges significantly in its kernel release cycle and live-patching depth."
+  },
+  "key_findings": [
+    "Oracle Linux's UEK (Unbreakable Enterprise Kernel) follows an independent release cycle and is generally more modern than RHEL's RHCK; for example, OL 9/10 utilizes UEK 8 (Kernel 6.12), which matches RHEL 10's kernel base but was available earlier.",
+    "Live patching on Oracle Linux via Ksplice provides superior operational depth compared to RHEL's kpatch, as Ksplice supports both UEK and RHCK while also enabling 'Zero-Downtime' patching for critical user-space libraries like glibc and openssl.",
+    "A mandatory operational delay exists for RHCK patches on Oracle Linux due to the requirement for Oracle to repackage Red Hat source code, resulting in a timing gap between RHSA and ELSA releases.",
+    "CVE severity ratings often diverge between Red Hat and Oracle (e.g., 'Important' vs 'Critical'), which can trigger different automated patching responses depending on vendor-specific advisory metadata.",
+    "AWS SSM Patch Manager requires separate patch baselines for RHEL and Oracle Linux because it filters patches based on vendor-specific metadata prefixes (RHSA vs ELSA) and product names in updateinfo.xml."
+  ],
+  "concepts": [
+    {
+      "name": "UEK (Unbreakable Enterprise Kernel)",
+      "description": "An Oracle-built Linux kernel based on more recent mainline LTS releases, optimized for performance and stability on Oracle hardware and cloud infrastructure."
+    },
+    {
+      "name": "Ksplice",
+      "description": "A zero-downtime patching technology that allows for kernel and user-space library updates without requiring a system reboot."
+    },
+    {
+      "name": "RHCK (Red Hat Compatible Kernel)",
+      "description": "The standard kernel shipped with RHEL, also provided by Oracle Linux to ensure 100% binary compatibility for RHEL-certified applications."
+    },
+    {
+      "name": "updateinfo.xml",
+      "description": "A metadata file used by package managers (yum/dnf) that contains information about security advisories, bug fixes, and enhancement updates."
+    }
+  ],
+  "tensions": [
+    "The benefit of more modern kernels in UEK must be weighed against the operational overhead of managing non-standard kernel versions across a hybrid RHEL/OL fleet.",
+    "The delay between RHSA and ELSA for RHCK patches on Oracle Linux creates a temporary security window that may not meet aggressive SLA requirements for Critical vulnerabilities."
+  ],
+  "open_questions": [
+    "What is the average statistical delay (in hours/days) between the release of an RHSA and its corresponding ELSA for RHCK on Oracle Linux 9?",
+    "To what extent will RHEL 10's kpatch implementation bridge the gap with Ksplice regarding user-space library patching?"
+  ],
+  "sources": [
+    {
+      "title": "Oracle Linux: Unbreakable Enterprise Kernel (UEK)",
+      "url": "https://www.oracle.com/linux/unbreakable-enterprise-kernel/",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Red Hat Enterprise Linux 10 Release Notes",
+      "url": "https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/10",
+      "tier": "official_doc"
+    },
+    {
+      "title": "AWS SSM Patch Manager: About Patch Baselines",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-how-it-works-baselines.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Oracle Ksplice: Zero-Downtime Patching",
+      "url": "https://linux.oracle.com/ksplice/",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Oracle Linux provides superior live-patching depth but requires distinct operational workflows for security compliance.",
+      "so_what": "Managing a dual-distro fleet increases configuration complexity in AWS SSM and introduces variable security windows due to advisory timing gaps.",
+      "bullets": [
+        "Ksplice offers zero-downtime updates for glibc and openssl on Oracle Linux, significantly reducing reboot requirements compared to RHEL.",
+        "Separate SSM Patch Manager baselines are technically mandatory due to divergent vendor metadata (RHSA vs ELSA).",
+        "UEK provides earlier access to modern kernel features (Kernel 6.12) but mandates independent validation from standard RHEL-certified stacks."
+      ],
+      "action_required": "Decide whether to standardize on Ksplice for the entire OL fleet or maintain a unified patching policy that accepts RHEL's reboot requirements."
+    },
+    "product_owner": {
+      "headline": "Updates for Oracle Linux and Red Hat must be managed separately to ensure security and system uptime.",
+      "so_what": "System maintenance for Oracle Linux can often happen without turning services off, while Red Hat systems usually need a restart for similar updates.",
+      "bullets": [
+        "Oracle Linux allows 'invisible' security updates for critical components like web security (openssl) without stopping the application.",
+        "There is a small delay in receiving some security updates on Oracle Linux compared to Red Hat.",
+        "Automated tools used to manage these systems must be configured specifically for each type of Linux to avoid reporting errors."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Review the uptime requirements for critical services to determine if Oracle Linux's live-patching features justify the multi-vendor management overhead.",
+        "work_to_assign": [
+          "Create separate SSM Patch Baselines for RHEL and Oracle Linux in all AWS accounts.",
+          "Verify application performance on UEK 8 (Kernel 6.12) for core product services."
+        ]
+      },
+      "questions_to_ask_engineering": [
+        "How much downtime could we avoid annually by leveraging Ksplice user-space patching?",
+        "Are there any legacy applications that strictly require the RHEL-Compatible Kernel (RHCK)?"
+      ]
+    }
+  }
+}

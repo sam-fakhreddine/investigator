@@ -1,0 +1,171 @@
+{
+  "topic": "Optimal Weekly Patching Strategy for RHEL and Oracle Linux on EC2",
+  "date": "2024-05-24",
+  "status": "Complete",
+  "question": "What is the documented optimal weekly patching strategy for RHEL 8/9/10 and Oracle Linux EC2 fleets that maximizes security compliance while minimizing reboots via SSM Patch Manager and Kernel Live Patching?",
+  "context": "Synthesis of specialized investigations into reboot detection, live patching, distribution divergence, SSM configuration, and operational gaps for enterprise Linux fleets on AWS.",
+  "quick_reference": {
+    "title": "Optimal Patching Strategy Summary",
+    "columns": [
+      "Component",
+      "RHEL 8/9/10 (Optimal)",
+      "Oracle Linux 8/9 (Optimal)"
+    ],
+    "rows": [
+      [
+        "Approval Delay",
+        "7d (Security) / 14d (Bugfix)",
+        "7d (Security) / 14d (Bugfix)"
+      ],
+      [
+        "Live Patching",
+        "kpatch (Kernel space only)",
+        "Ksplice (Kernel + glibc/openssl)"
+      ],
+      [
+        "Reboot Cycle",
+        "Mandatory 6-12 months",
+        "Optional (Up to 10 years)"
+      ],
+      [
+        "SSM Baseline",
+        "Filter: RHSA / RHBA",
+        "Filter: ELSA / ELBA"
+      ],
+      [
+        "Reboot Option",
+        "RebootIfNeeded / NoReboot (HA)",
+        "RebootIfNeeded / NoReboot (HA)"
+      ],
+      [
+        "Detection Tool",
+        "needs-restarting (DNF4/5)",
+        "ksplice-show / uptrack-show"
+      ]
+    ],
+    "notes": "RHEL 10 extends the kpatch window to 1 year; Oracle Ksplice requires Premier Support for userspace patching."
+  },
+  "key_findings": [
+    "The documented optimal strategy utilizes a tiered auto-approval model: Security updates are approved after 7 days, Bugfix updates after 14 days, and Enhancements after 30 days or via manual review.",
+    "For RHEL 8 and 9, kernel live patching via kpatch requires a system reboot at least every 6 months to transition to a new baseline, while RHEL 10 extends this window to 1 year for AWS-optimized kernels.",
+    "Oracle Linux with Ksplice provides superior uptime by supporting live patches for the full 10-year Premier Support window and enabling zero-downtime updates for critical userspace libraries like glibc and openssl.",
+    "AWS SSM Patch Manager requires separate custom baselines for RHEL and Oracle Linux due to divergent metadata prefixes (RHSA vs ELSA) and vendor-specific advisory classification systems.",
+    "Using the NoReboot parameter in SSM enables staged patching for high-availability tiers but results in a Non-Compliant status with InstalledPendingReboot metadata until a reboot and scan are completed.",
+    "needs-restarting (dnf-utils) identifies required reboots by scanning /proc/[PID]/maps for deleted library segments, but standard versions are not natively aware of Ksplice in-memory patches.",
+    "RHEL 10's DNF5 features faster, metadata-driven reboot detection and supports systemd soft-reboots, which restart userspace without a full hardware or kernel restart.",
+    "Operational 'reboot debt' accumulates when live patching is used exclusively, leading to unpatched userspace libraries and increased kernel complexity that heightens the risk of failure during eventual restarts.",
+    "Security compliance reporting in SSM often reflects the on-disk kernel version, potentially resulting in false-negative audit findings for instances that are effectively patched in-memory via kpatch or Ksplice.",
+    "For immutable infrastructure such as EKS worker nodes, the optimal patching strategy is node replacement (AMI swap) rather than in-place patching to prevent configuration drift and 'snowflake' nodes."
+  ],
+  "concepts": [
+    {
+      "name": "InstalledPendingReboot",
+      "description": "An SSM metadata property indicating patches are installed on-disk but the system requires a reboot to activate them and return to a 'Compliant' state."
+    },
+    {
+      "name": "kpatch",
+      "description": "Red Hat's implementation of kernel live patching using ftrace-based function redirection to apply security fixes without downtime."
+    },
+    {
+      "name": "Ksplice",
+      "description": "Oracle Linux technology for zero-downtime patching of the kernel and critical userspace libraries like glibc and OpenSSL at the object-code level."
+    },
+    {
+      "name": "Reboot Debt",
+      "description": "The accumulation of unapplied updates and configuration changes that can only be cleared by a system restart, increasing operational risk over time."
+    },
+    {
+      "name": "systemd soft-reboot",
+      "description": "A RHEL 10 feature that restarts the userspace environment without a full hardware or kernel reboot, significantly reducing maintenance downtime."
+    },
+    {
+      "name": "UEK (Unbreakable Enterprise Kernel)",
+      "description": "An Oracle-built Linux kernel based on modern mainline LTS releases, optimized for performance and stability on cloud infrastructure."
+    }
+  ],
+  "tensions": [
+    "Compliance vs. Availability: Staged patching (NoReboot) maintains uptime but triggers Non-Compliant alerts in SSM, requiring operational coordination to bridge the reporting gap.",
+    "Automation vs. Stability: Auto-approving enhancement updates can lead to unexpected system behavior, favoring a longer delay or manual approval for these non-security changes.",
+    "Baseline Drift: Excessive reliance on live patching can lead to running kernels that diverge significantly from the on-disk baseline, complicating disaster recovery and troubleshooting."
+  ],
+  "open_questions": [
+    "What is the average statistical delay between the release of an RHSA and its corresponding ELSA for Oracle Linux RHCK images?",
+    "To what extent will RHEL 10 kpatch implementation bridge the gap with Ksplice regarding automated userspace library patching?",
+    "What is the specific overhead of DNF5's memory scanning on high-PID-count systems compared to DNF4?"
+  ],
+  "sources": [
+    {
+      "title": "How patch baselines work",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-how-it-works-baselines.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Red Hat Enterprise Linux Kernel Live Patching",
+      "url": "https://access.redhat.com/articles/kernel-live-patching",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Oracle Linux Ksplice Overview",
+      "url": "https://www.oracle.com/linux/ksplice/",
+      "tier": "official_doc"
+    },
+    {
+      "title": "DNF5 needs-restarting command reference",
+      "url": "https://dnf5.readthedocs.io/en/latest/command_ref/needs-restarting.8.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Updating EKS Managed Node Groups",
+      "url": "https://docs.aws.amazon.com/eks/latest/userguide/managed-node-update.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Oracle Linux: Unbreakable Enterprise Kernel (UEK)",
+      "url": "https://www.oracle.com/linux/unbreakable-enterprise-kernel/",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Red Hat Enterprise Linux 10 Product Lifecycle",
+      "url": "https://access.redhat.com/support/policy/updates/errata#Red_Hat_Enterprise_Linux_10",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "Standardize on a tiered auto-approval strategy with live-patching and scheduled node replacement to balance security and uptime.",
+      "so_what": "Reliance on live-patching without reboots creates 'reboot debt' and compliance reporting gaps that can mask actual security risks and increase recovery complexity.",
+      "bullets": [
+        "Implement a 7/14/30 day auto-approval delay for Security, Bugfix, and Enhancement patches respectively to automate the majority of updates.",
+        "Utilize kpatch for RHEL (mandatory reboot every 6-12 months) and Ksplice for Oracle Linux (supports critical userspace patching).",
+        "Adopt RHEL 10's DNF5 and soft-reboot features to minimize maintenance downtime during mandatory system restarts.",
+        "Prioritize immutable node replacement (AMI swap) for EKS and stateless tiers to eliminate configuration drift and 'snowflake' nodes."
+      ],
+      "action_required": "Establish a maximum 'Reboot Debt' threshold (e.g., 180 days) for all stateful EC2 instances to ensure periodic baseline synchronization."
+    },
+    "product_owner": {
+      "headline": "We can automate most security updates for Linux servers, but some will still require scheduled restarts to stay fully compliant.",
+      "so_what": "Skipping restarts keeps systems running but causes them to show as 'Non-Compliant' in AWS security reports, which may require manual explanation during audits.",
+      "bullets": [
+        "Security fixes are applied automatically after 7 days; non-security bug fixes wait for 14 days to ensure stability.",
+        "Live patching allows us to fix the core of the system without turning it off, but this is a temporary bridge rather than a permanent substitute for restarts.",
+        "Oracle Linux systems can stay running longer without restarts than Red Hat systems, but they require a higher-tier subscription for this feature.",
+        "The most reliable way to keep systems healthy is to replace them with fresh, updated versions (AMI swaps) rather than patching them in place."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Determine if the organization accepts 'InstalledPendingReboot' status in AWS during peak production months to avoid maintenance downtime.",
+        "work_to_assign": [
+          "Configure separate SSM Patch Baselines for RHEL and Oracle Linux in all AWS environments.",
+          "Implement maintenance windows with RebootIfNeeded for non-critical application tiers.",
+          "Verify the cost vs. benefit of Oracle Premier Support for zero-downtime glibc/openssl patching."
+        ],
+        "leadership_input": "Confirm if the 6-to-12 month RHEL reboot window aligns with the organizational security compliance policy."
+      },
+      "questions_to_ask_engineering": [
+        "How often are we currently performing full reboots versus live patching across our fleet?",
+        "Do our security scanners recognize live patches, or do we have a reporting gap we need to address?",
+        "Are we using immutable node replacement for our EKS clusters to prevent drift?"
+      ]
+    }
+  }
+}

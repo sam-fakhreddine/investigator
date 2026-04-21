@@ -1,0 +1,107 @@
+{
+  "topic": "SSM Patch Manager Baselines for RHEL and Oracle Linux",
+  "date": "2026-04-21",
+  "status": "Complete",
+  "question": "What is the recommended design for SSM Patch Manager baselines for RHEL (8/9/10) and Oracle Linux (8/9 equivalents)? Include advisory classification (Security, Bugfix, Enhancement) strategies for weekly automated runs vs manual approval, inclusion of kpatch-patch/Ksplice packages, maintenance window design for no-reboot vs reboot runbooks, and compliance state behavior when NoReboot is used (i.e., how SSM reports on effective vs on-disk patch state).",
+  "context": "SSM Patch Manager uses repository metadata to classify and approve patches. For RHEL and Oracle Linux, this involves mapping vendor-specific advisory prefixes to SSM internal classification system.",
+  "quick_reference": {
+    "title": "Patching Strategy Overview",
+    "columns": ["Category", "Strategy", "Impact/Action"],
+    "rows": [
+      ["Advisory Classification", "7-day delay (Security), 14-day delay (Bugfix), 30-day/Manual (Enhancement)", "Automates regular patching while minimizing instability."],
+      ["Live Patching", "Explicitly add 'kpatch-patch' or 'ksplice/uptrack' to Approved Patches", "Enables kernel updates without downtime."],
+      ["Maintenance Windows", "NoReboot (Staged) vs RebootIfNeeded (Auto)", "Staged patching allows for traffic draining and manual verification."],
+      ["Compliance State", "InstalledPendingReboot SSM metadata property", "Reports non-compliant until reboot; indicates on-disk vs effective state mismatch via SSM metadata."]
+    ],
+    "notes": "RHEL/OL use specific advisory prefixes (RHSA/ELSA, RHBA/ELBA, RHEA/ELEA) which SSM parses from repo metadata."
+  },
+  "key_findings": [
+    "Recommended strategy: Auto-approve Security (Critical/Important) after 7 days and Bugfix after 14 days for automated weekly runs.",
+    "Enhancement updates should have a 30-day delay or require manual approval to avoid unexpected feature changes.",
+    "Live-patching packages like kpatch-patch (RHEL/AL2) and ksplice/uptrack (Oracle) must be explicitly added to a Custom Patch Baseline Approved patches list.",
+    "Two primary runbook patterns: RebootIfNeeded for automated end-to-end patching and NoReboot for staged patching in high-availability environments.",
+    "When NoReboot is used, SSM reports a compliance status of Non-Compliant with a specific patch state of InstalledPendingReboot.",
+    "A reboot and a subsequent Scan operation are required to transition to Compliant after a NoReboot patch installation."
+  ],
+  "concepts": [
+    {
+      "name": "InstalledPendingReboot",
+      "description": "An SSM metadata property (not an RPM state) indicating patches are on-disk but not active in memory."
+    },
+    {
+      "name": "Advisory Prefixes",
+      "description": "Vendor-specific naming (e.g., RHSA/ELSA) used to classify patch types."
+    },
+    {
+      "name": "Live Patching",
+      "description": "Technology allowing kernel updates without a system reboot (kpatch/Ksplice)."
+    }
+  ],
+  "tensions": [
+    "Compliance vs. Availability: Using NoReboot maintains availability but results in a Non-Compliant status in SSM until a reboot occurs.",
+    "Automation vs. Stability: Auto-approving enhancements can lead to unexpected system behavior changes, favoring a manual approval or longer delay for these updates."
+  ],
+  "open_questions": [
+    "What are the specific RHEL 10 advisory metadata classification prefixes once it is GA?",
+    "Does SSM provide native support for Oracle Ksplice 'uptrack-upgrade' for non-kernel user-space live patching?"
+  ],
+  "sources": [
+    {
+      "title": "How patch baselines work",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-how-it-works-baselines.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "About patch compliance",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-compliance-about.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Organizing patches into groups (Tiered Strategy)",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-organizing-patch-groups.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "SSM Agent requirements for Patch Manager",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-ssm-agent-requirements.html",
+      "tier": "official_doc"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "SSM Patch Manager enables automated, classification-driven patching for RHEL and Oracle Linux with integrated compliance reporting.",
+      "so_what": "Staged patching (NoReboot) maintains uptime but triggers Non-Compliant alerts, requiring operational coordination to bridge the gap between on-disk and effective states.",
+      "bullets": [
+        "Implement a tiered auto-approval strategy (7/14/30 days) to balance security and stability.",
+        "Explicitly include kpatch-patch or Ksplice in custom baselines to leverage live-patching capabilities.",
+        "Distinguish between RebootIfNeeded and NoReboot runbooks based on workload sensitivity.",
+        "Acknowledge that InstalledPendingReboot status is an expected intermediate SSM metadata state for staged patching."
+      ],
+      "action_required": "Define and document the maintenance window strategy (Staged vs. Auto-Reboot) for each application tier."
+    },
+    "product_owner": {
+      "headline": "Security updates for Linux servers can be automated to happen weekly without immediate reboots.",
+      "so_what": "This allows for critical security fixes to be applied without disrupting users, though a scheduled restart will eventually be needed to fully complete the update.",
+      "bullets": [
+        "Critical security fixes are applied after 7 days, while non-critical bugs wait 14 days.",
+        "New features are delayed or held for manual review to prevent unexpected changes to the system.",
+        "Servers will show a Non-Compliant warning after patching if they haven't been restarted yet.",
+        "The Live Patching feature can be used to apply some updates without any downtime at all."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Review the proposed auto-approval delays (7/14/30 days) with stakeholders to ensure they align with business risk tolerance.",
+        "work_to_assign": [
+          "Configure custom SSM patch baselines for RHEL and Oracle Linux tiers.",
+          "Implement maintenance windows with NoReboot parameters for high-availability clusters.",
+          "Set up monitoring alerts that distinguish InstalledPendingReboot from actual patching failures."
+        ]
+      },
+      "questions_to_ask_engineering": [
+        "Which server tiers require NoReboot staged patching versus automatic restarts?",
+        "How will we track when a server is Pending Reboot to ensure we don't stay in that state indefinitely?",
+        "Are all our RHEL and Oracle Linux versions currently compatible with Live Patching?"
+      ]
+    }
+  }
+}

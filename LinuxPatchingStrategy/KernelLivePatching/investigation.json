@@ -1,0 +1,110 @@
+{
+  "topic": "Kernel Live Patching: RHEL kpatch vs. Oracle Linux Ksplice",
+  "date": "2025-05-15",
+  "status": "Complete",
+  "question": "Compare RHEL live patching via `kpatch` (Red Hat's implementation) with Oracle Linux live patching via `Ksplice` (Unbreakable Enterprise Kernel), including architectural differences, subscription requirements (e.g., Premier support), CVE class live-patchability constraints (e.g., scheduler, driver, data structures), support windows per kernel version (RHEL 8/9/10), cumulative in-memory state behavior, and SSM Patch Manager integration for compliance reporting.",
+  "context": "This investigation was prompted by the need to understand the technical and operational trade-offs between RHEL and Oracle Linux live-patching frameworks for enterprise compliance and uptime strategies.",
+  "quick_reference": {
+    "columns": ["Feature", "RHEL kpatch", "Oracle Linux Ksplice"],
+    "rows": [
+      ["Architecture", "ftrace-based function redirection", "Object-code level transformation"],
+      ["Scope", "Kernel-space only", "Kernel and Userspace (glibc, openssl)"],
+      ["Support Window", "6 months per kernel errata", "Full Premier Support (up to 10 years)"],
+      ["Memory Model", "Cumulative by replacement", "Persistent accumulation"],
+      ["Subscription", "Standard/Premium (included)", "Premier Support (required)"],
+      ["SSM Integration", "Native via kpatch-patch packages", "Standard package-based orchestration"]
+    ],
+    "notes": "RHEL requires kernel rotation every 6 months to maintain live patch coverage, whereas Ksplice supports individual kernels for their entire lifecycle."
+  },
+  "key_findings": [
+    "kpatch (RHEL) utilizes ftrace to redirect function calls to patched versions, whereas Ksplice (Oracle) operates at the object-code layer using a run-time linker to apply binary diffs.",
+    "RHEL live patches for a specific kernel version are only provided for 6 months; maintaining coverage requires rebooting into a new baseline kernel at least twice a year.",
+    "Oracle Linux Ksplice provides live patches for the entire Premier Support window (up to 10 years) for both UEK and RHCK, significantly reducing the frequency of required reboots.",
+    "Both platforms are limited by 'quiescent' functions: code that is always on the stack (like the scheduler) or complex drivers with hardware-state dependencies are often unpatchable.",
+    "CVEs requiring changes to existing data structure sizes or layouts are generally not live-patchable without reboots, though kpatch uses 'Shadow Variables' to mitigate some state-change limitations.",
+    "SSM Patch Manager typically reports compliance based on the on-disk kernel version; live-patched kernels may appear non-compliant in default reports unless custom inventory scripts are used."
+  ],
+  "concepts": [
+    {
+      "name": "ftrace",
+      "description": "The kernel's function tracer used by kpatch to redirect execution from original functions to patched versions at runtime."
+    },
+    {
+      "name": "Ksplice Enhanced Client",
+      "description": "An Oracle Linux extension that allows live patching of critical userspace libraries like glibc and openssl without restarting processes."
+    },
+    {
+      "name": "Shadow Variables",
+      "description": "A kpatch mechanism used to associate new data with existing kernel structures when the original structure cannot be resized."
+    },
+    {
+      "name": "Cumulative by Replacement",
+      "description": "A patching model where a new live patch module contains all previous fixes and completely replaces the existing patch module in memory."
+    }
+  ],
+  "tensions": [
+    "Uptime vs. Baseline Drift: While Ksplice allows 10 years of uptime, the running kernel may drift significantly from the on-disk baseline, complicating troubleshooting and disaster recovery.",
+    "Compliance Reporting: Security scanners often flag 'Effective Kernel' as vulnerable because they check the on-disk version rather than the in-memory state, leading to false-negative audit results."
+  ],
+  "open_questions": [
+    "What is the exact performance overhead of Ksplice userspace patching (Enhanced Client) compared to standard library execution?",
+    "How do RHEL 10's live patching support windows differ from the 8/9 model as the OS matures?"
+  ],
+  "sources": [
+    {
+      "title": "Livepatch — The Linux Kernel documentation",
+      "url": "https://www.kernel.org/doc/html/latest/livepatch/livepatch.html",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Applying patches with kernel live patching - RHEL 8",
+      "url": "https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/managing_monitoring_and_updating_the_kernel/applying-patches-with-kernel-live-patching_managing-monitoring-and-updating-the-kernel",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Oracle Linux: Ksplice User's Guide",
+      "url": "https://docs.oracle.com/en/operating-systems/oracle-linux/ksplice-user/",
+      "tier": "official_doc"
+    },
+    {
+      "title": "Using Kernel Live Patching on managed nodes",
+      "url": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-kernel-live-patching.html",
+      "tier": "user_guide"
+    }
+  ],
+  "audience_briefs": {
+    "engineering_leadership": {
+      "headline": "RHEL live patching requires reboots every 6 months, while Oracle Linux Ksplice supports the full 10-year lifecycle.",
+      "so_what": "Oracle Linux offers superior uptime for critical kernels, but RHEL's model ensures closer alignment with tested baselines at the cost of biannual reboots.",
+      "bullets": [
+        "RHEL kpatch is limited to kernel-space; Ksplice can patch userspace libraries like glibc and openssl.",
+        "Ksplice requires Premier Support ($$) whereas kpatch is included in Standard/Premium RHEL subscriptions.",
+        "Compliance reporting in SSM remains a friction point as standard scans typically ignore in-memory patch state."
+      ],
+      "action_required": "Evaluate whether the operational benefit of userspace patching and 10-year kernel longevity justifies the cost of Oracle Premier Support."
+    },
+    "product_owner": {
+      "headline": "Choosing between RHEL and Oracle Linux impacts how often systems must restart for security updates.",
+      "so_what": "RHEL systems must restart twice a year for security, while Oracle Linux systems can theoretically run for years without interruption, though at a higher subscription cost.",
+      "bullets": [
+        "RHEL keeps security fixes free but forces a restart every 6 months to stay current.",
+        "Oracle Linux can fix major security holes in web servers and databases without a restart.",
+        "Both systems still require restarts for hardware changes or very complex security fixes that cannot be patched 'live'.",
+        "Security reports may incorrectly show the system is unpatched even after a live fix is applied."
+      ],
+      "risk_level": "Medium",
+      "next_steps": {
+        "po_action": "Decide if 'Zero Downtime' is a high-priority requirement for the product's SLA.",
+        "work_to_assign": [
+          "Assess the cost difference between RHEL Premium and Oracle Premier Support.",
+          "Identify critical applications that benefit from glibc/openssl live patching."
+        ],
+        "leadership_input": "Architects should confirm if the current SSM Patch Manager setup can be customized to report 'Effective Kernel' compliance."
+      },
+      "questions_to_ask_engineering": [
+        "How often do we currently restart for kernel updates?",
+        "Do our security scanners recognize live patches, or do we have a reporting gap?"
+      ]
+    }
+  }
+}
